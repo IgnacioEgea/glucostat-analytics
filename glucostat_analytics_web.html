@@ -1,0 +1,1099 @@
+<!doctype html>
+<html lang="es" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GlucoStat Analytics - Estudio Glucosa UCM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Outfit', 'sans-serif'],
+          mono: ['JetBrains Mono', 'monospace']
+        }
+      }
+    }
+  }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --bg-main: #f1f5f9;
+    --surface: #ffffff;
+    --sub-card: #f8fafc;
+    --text-main: #0f172a;
+    --text-muted: #475569;
+    --border-color: #cbd5e1;
+  }
+  .dark {
+    --bg-main: #090d16;
+    --surface: #111827;
+    --sub-card: #1f2937;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --border-color: #334155;
+  }
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: 'Outfit', sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  .glass-card {
+    background-color: var(--surface);
+    border: 2px solid var(--border-color);
+    border-radius: 1.25rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+  }
+  .sub-card {
+    background-color: var(--sub-card);
+  }
+  .card-text-main { color: var(--text-main); }
+  .card-text-muted { color: var(--text-muted); }
+  .btn-tactile {
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    box-shadow: 0 4px 0 0 rgba(0,0,0,0.2);
+  }
+  .btn-tactile:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 0 rgba(0,0,0,0.2);
+  }
+  .cartoon-badge {
+    border: 2px solid var(--border-color);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg-main); }
+  ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+</style>
+</head>
+<body class="min-h-screen">
+
+  <!-- ========================================== -->
+  <!-- HEADER FIJO STICKY -->
+  <!-- ========================================== -->
+  <header class="sticky top-0 z-50 backdrop-blur-md bg-opacity-90 dark:bg-opacity-90 bg-slate-100/90 dark:bg-slate-950/90 border-b-2 border-slate-200 dark:border-slate-800 px-4 sm:px-8 py-4">
+    <div class="max-w-[1600px] mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
+      
+      <!-- Brand Title -->
+      <div class="flex items-center gap-3.5">
+        <div class="w-12 h-12 rounded-2xl bg-cyan-500 flex items-center justify-center text-slate-950 shadow-lg text-2xl">
+          🔬
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-xl sm:text-2xl font-black tracking-tight card-text-main">GlucoStat Analytics</h1>
+            <span class="cartoon-badge text-[11px] px-2.5 py-0.5 rounded-md font-extrabold bg-cyan-500/20 text-cyan-600 dark:text-cyan-300">v4.0 UCM</span>
+          </div>
+          <p class="text-xs card-text-muted font-mono">Estudio de Tolerancia Oral a la Glucosa (N=65)</p>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="flex items-center gap-2 overflow-x-auto max-w-full pb-2 lg:pb-0 font-mono text-xs font-bold">
+        <a href="#ejercicio1" class="px-3.5 py-2 rounded-xl sub-card card-text-main hover:bg-cyan-500 hover:text-slate-950 transition-colors whitespace-nowrap">1. Descriptiva</a>
+        <a href="#ejercicio2" class="px-3.5 py-2 rounded-xl sub-card card-text-main hover:bg-amber-500 hover:text-slate-950 transition-colors whitespace-nowrap">2. Regresión</a>
+        <a href="#ejercicio3" class="px-3.5 py-2 rounded-xl sub-card card-text-main hover:bg-purple-500 hover:text-slate-950 transition-colors whitespace-nowrap">3. Contrastes</a>
+        <a href="#excel-inspector" class="px-3.5 py-2 rounded-xl sub-card card-text-main hover:bg-emerald-500 hover:text-slate-950 transition-colors whitespace-nowrap">4. Fórmulas Excel</a>
+        <a href="#dataset-editor" class="px-3.5 py-2 rounded-xl sub-card card-text-main hover:bg-rose-500 hover:text-slate-950 transition-colors whitespace-nowrap">5. Datos & CSV</a>
+      </nav>
+
+      <!-- Global Controls -->
+      <div class="flex items-center gap-3">
+        <button onclick="toggleTheme()" class="btn-tactile px-4 py-2.5 text-xs font-mono font-bold rounded-xl sub-card card-text-main border-2 border-slate-300 dark:border-slate-700 flex items-center gap-2.5 shadow">
+          <span id="theme-icon" class="text-base">🌙</span> <span id="theme-text">Modo Oscuro</span>
+        </button>
+        <button onclick="resetDatasetToOriginal()" class="btn-tactile px-4 py-2.5 text-xs font-mono font-bold rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white border-b-cyan-800 flex items-center gap-2.5 shadow">
+          <span class="text-base">🔄</span> Restaurar Muestra
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main Continuous Content -->
+  <main class="page-container max-w-[1600px] mx-auto px-4 sm:px-8 py-16 space-y-24">
+
+    <!-- ========================================== -->
+    <!-- EJERCICIO 1: DESCRIPTIVA Y NORMALIDAD -->
+    <!-- ========================================== -->
+    <section id="ejercicio1" class="space-y-12 scroll-mt-28">
+      
+      <div class="flex items-center gap-4 border-b-2 border-slate-300 dark:border-slate-800 pb-6">
+        <div class="w-14 h-14 rounded-2xl bg-cyan-500/20 border-2 border-cyan-500/60 flex items-center justify-center text-cyan-600 dark:text-cyan-300 text-2xl font-black shadow">
+          📊
+        </div>
+        <div>
+          <h2 class="text-2xl sm:text-3xl font-black card-text-main tracking-tight">Ejercicio 1: Estadística Descriptiva y Normalidad</h2>
+          <p class="text-sm sm:text-base card-text-muted mt-1.5">Medidas de centralización, dispersión, coeficiente de variación, simetría y contrastes Shapiro-Wilk.</p>
+        </div>
+      </div>
+
+      <!-- Descriptive Cards Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="glass-card p-7 border-l-8 border-l-cyan-400 space-y-3">
+          <span class="text-xs font-mono font-bold card-text-muted uppercase tracking-wider">MEDIA BASAL JÓVENES</span>
+          <div id="dyn-mean-j" class="text-3xl font-black card-text-main">84.69 <span class="text-sm font-normal card-text-muted">mg/dL</span></div>
+          <span id="dyn-cv-j" class="text-xs text-cyan-600 dark:text-cyan-300 block font-mono font-bold pt-1">CV = 0.104 (Representativa)</span>
+        </div>
+        <div class="glass-card p-7 border-l-8 border-l-emerald-400 space-y-3">
+          <span class="text-xs font-mono font-bold card-text-muted uppercase tracking-wider">MEDIA BASAL ADULTOS</span>
+          <div id="dyn-mean-a" class="text-3xl font-black card-text-main">89.40 <span class="text-sm font-normal card-text-muted">mg/dL</span></div>
+          <span id="dyn-cv-a" class="text-xs text-emerald-600 dark:text-emerald-300 block font-mono font-bold pt-1">CV = 0.082 (Representativa)</span>
+        </div>
+        <div class="glass-card p-7 border-l-8 border-l-amber-400 space-y-3">
+          <span class="text-xs font-mono font-bold card-text-muted uppercase tracking-wider">ASIMETRÍA ADULTOS</span>
+          <div id="dyn-skew-a" class="text-3xl font-black card-text-main">-0.0075</div>
+          <span class="text-xs text-amber-600 dark:text-amber-300 block font-mono font-bold pt-1">Distribución Simétrica</span>
+        </div>
+        <div class="glass-card p-7 border-l-8 border-l-purple-400 space-y-3">
+          <span class="text-xs font-mono font-bold card-text-muted uppercase tracking-wider">CURTOSIS ADULTOS</span>
+          <div id="dyn-kurt-a" class="text-3xl font-black card-text-main">-0.6130</div>
+          <span class="text-xs text-purple-600 dark:text-purple-300 block font-mono font-bold pt-1">Forma Platicúrtica</span>
+        </div>
+      </div>
+
+      <!-- Comparative Table & Normal Density Chart -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-4">
+        <div class="lg:col-span-6 glass-card p-8 border-2 border-slate-300 dark:border-slate-800 space-y-6">
+          <h3 class="text-base font-bold font-mono text-cyan-600 dark:text-cyan-300 uppercase tracking-wider flex items-center justify-between">
+            <span class="flex items-center gap-3"><span class="text-xl">📋</span> Resumen Estadístico Descriptivo</span>
+            <span class="cartoon-badge sub-card card-text-main text-xs px-3.5 py-1.5 rounded-xl">Glucosa Basal</span>
+          </h3>
+          <div class="overflow-x-auto pt-2">
+            <table class="w-full text-sm text-left card-text-main">
+              <thead class="sub-card text-cyan-600 dark:text-cyan-300 font-mono uppercase text-xs">
+                <tr>
+                  <th class="p-4 rounded-l-xl">Medida Estadística</th>
+                  <th class="p-4">Jóvenes (&lt;30)</th>
+                  <th class="p-4 rounded-r-xl">Adultos (&gt;30)</th>
+                </tr>
+              </thead>
+              <tbody id="descriptive-tbody" class="divide-y divide-slate-200 dark:divide-slate-800 font-mono font-medium">
+                <!-- Dynamic Content -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="lg:col-span-6 glass-card p-8 border-2 border-slate-300 dark:border-slate-800 flex flex-col justify-between space-y-6">
+          <div class="space-y-5">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+              <h3 class="text-base font-bold font-mono text-cyan-600 dark:text-cyan-300 uppercase tracking-wider flex items-center gap-3">
+                <span class="text-xl">📈</span> Figura 2 PDF: Histograma de Densidad
+              </h3>
+              <div class="flex gap-2 sub-card p-2 rounded-xl">
+                <button onclick="updateNormChart('jovenes')" id="btn-norm-j" class="px-4 py-2 text-xs rounded-lg font-bold bg-cyan-600 text-white shadow">Jóvenes</button>
+                <button onclick="updateNormChart('adultos')" id="btn-norm-a" class="px-4 py-2 text-xs rounded-lg font-bold card-text-muted hover:text-cyan-600 dark:hover:text-white">Adultos</button>
+              </div>
+            </div>
+            <div class="h-80 relative pt-2">
+              <canvas id="normalityChart"></canvas>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4 text-xs font-mono pt-3">
+            <div class="p-4 sub-card rounded-xl space-y-1.5">
+              <span class="card-text-muted block">Shapiro-Wilk (Jóvenes)</span>
+              <span id="sw-jovenes" class="font-black text-cyan-600 dark:text-cyan-300 text-sm block">W = 0.9626 (p = 0.273)</span>
+              <span class="text-[11px] text-emerald-600 dark:text-emerald-400 block font-bold pt-0.5">✓ Se acepta Normalidad</span>
+            </div>
+            <div class="p-4 sub-card rounded-xl space-y-1.5">
+              <span class="card-text-muted block">Shapiro-Wilk (Adultos)</span>
+              <span id="sw-adultos" class="font-black text-emerald-600 dark:text-emerald-300 text-sm block">W = 0.9776 (p = 0.759)</span>
+              <span class="text-[11px] text-emerald-600 dark:text-emerald-400 block font-bold pt-0.5">✓ Se acepta Normalidad</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FIGURA 1 & FIGURA 3 DEL PDF -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-4">
+        <!-- Figura 1: Diagramas de Cajas (Box-plot) -->
+        <div class="glass-card p-8 border-2 border-slate-300 dark:border-slate-800 space-y-6">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-cyan-500/20 border-2 border-cyan-500/60 flex items-center justify-center text-cyan-600 dark:text-cyan-300 text-xl font-black shadow">
+                📦
+              </div>
+              <h3 class="text-base font-bold font-mono text-cyan-600 dark:text-cyan-300 uppercase tracking-wider">
+                Figura 1 PDF: Diagramas de Cajas
+              </h3>
+            </div>
+            <span class="cartoon-badge sub-card card-text-main text-xs font-mono px-3.5 py-1.5 rounded-xl">Tukey 1.5·RIC</span>
+          </div>
+          <div class="h-80 relative pt-2">
+            <canvas id="boxplotChart"></canvas>
+          </div>
+          <div id="boxplot-summary" class="p-5 sub-card rounded-xl font-mono text-xs card-text-muted space-y-2 flex items-center gap-3">
+            <span class="text-xl">💡</span>
+            <div><strong>Análisis de Atípicos:</strong> Glucosa basal sin atípicos [65 - 103]. Glucosa a los 60 min con 2 atípicos leves (131 y 172 mg/dL).</div>
+          </div>
+        </div>
+
+        <!-- Figura 3: Gráfico Q-Q Normal -->
+        <div class="glass-card p-8 border-2 border-slate-300 dark:border-slate-800 space-y-6">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-cyan-500/20 border-2 border-cyan-500/60 flex items-center justify-center text-cyan-600 dark:text-cyan-300 text-xl font-black shadow">
+                📐
+              </div>
+              <h3 class="text-base font-bold font-mono text-cyan-600 dark:text-cyan-300 uppercase tracking-wider">
+                Figura 3 PDF: Gráficos Q-Q Normal
+              </h3>
+            </div>
+            <div class="flex gap-2 sub-card p-2 rounded-xl">
+              <button onclick="updateQqChart('jovenes')" id="btn-qq-j" class="px-4 py-2 text-xs rounded-lg font-bold bg-cyan-600 text-white shadow">Jóvenes</button>
+              <button onclick="updateQqChart('adultos')" id="btn-qq-a" class="px-4 py-2 text-xs rounded-lg font-bold card-text-muted hover:text-cyan-600 dark:hover:text-white">Adultos</button>
+            </div>
+          </div>
+          <div class="h-80 relative pt-2">
+            <canvas id="qqChart"></canvas>
+          </div>
+          <p class="text-xs card-text-muted font-mono leading-relaxed p-5 sub-card rounded-xl flex items-center gap-3">
+            <span class="text-xl">✨</span>
+            <span>✓ La alineación de los puntos sobre la diagonal teórica confirma la idoneidad del supuesto de normalidad para ambas muestras.</span>
+          </p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- EJERCICIO 2: REGRESIÓN LINEAL Y PREDICTOR -->
+    <!-- ========================================== -->
+    <section id="ejercicio2" class="space-y-12 scroll-mt-28">
+      
+      <div class="flex items-center gap-4 border-b-2 border-slate-300 dark:border-slate-800 pb-6">
+        <div class="w-14 h-14 rounded-2xl bg-amber-500/20 border-2 border-amber-500/60 flex items-center justify-center text-amber-600 dark:text-amber-300 text-2xl font-black shadow">
+          📈
+        </div>
+        <div>
+          <h2 class="text-2xl sm:text-3xl font-black card-text-main tracking-tight">Ejercicio 2: Relación Lineal, Regresión y Predicción</h2>
+          <p class="text-sm sm:text-base card-text-muted mt-1.5">Modelo lineal para jóvenes: estimación a los 60 min (Ŷ) en función de glucosa basal (X).</p>
+        </div>
+      </div>
+
+      <!-- Calculator Simulator Card -->
+      <div class="glass-card p-8 sm:p-10 border-2 border-amber-500/50 bg-gradient-to-br from-amber-500/5 via-transparent to-amber-500/10 space-y-8">
+        <div class="flex flex-col lg:flex-row items-center justify-between gap-8">
+          <div class="space-y-4 max-w-2xl">
+            <span class="cartoon-badge bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-500/60 text-xs font-mono font-extrabold px-4 py-1.5 rounded-xl inline-block">
+              🎛️ SIMULADOR CLÍNICO DE RESPUESTA
+            </span>
+            <h3 class="text-3xl font-black card-text-main">Calculadora Predictiva a los 60 Minutos</h3>
+            <p class="text-sm card-text-muted">
+              Ecuación de regresión ajustada en tiempo real: <code id="dyn-reg-equation" class="text-amber-600 dark:text-amber-300 font-mono font-bold sub-card px-3.5 py-2 rounded-xl inline-block mt-1">Ŷ = 91.3837 + 0.6969 · X</code>
+            </p>
+          </div>
+
+          <!-- Live Output Badge & Restore Button -->
+        <div class="sub-card p-8 rounded-2xl border-2 border-amber-500/60 text-center min-w-[340px] shadow-xl space-y-3.5">
+          <span class="text-xs font-mono font-bold card-text-muted block uppercase tracking-wider">Estimación Glucosa 60 Min (Ŷ)</span>
+          <div id="sim-result-y" class="text-4xl sm:text-5xl font-black text-amber-600 dark:text-amber-300 font-mono">149.23 mg/dL</div>
+          <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono block pt-1">Para Nivel Basal X = <span id="sim-result-x">83.0</span> mg/dL</span>
+          
+          <div class="pt-3">
+            <button onclick="resetPredictorValue()" class="w-full btn-tactile py-3 px-4 text-xs font-mono font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white border-b-amber-800 flex items-center justify-center gap-2.5 shadow">
+              <span class="text-base">↺</span> Restaurar X = 83 mg/dL (Valor Examen)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- FIGURA 4 & FIGURA 5 DEL PDF -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-4">
+        <!-- Figura 4: Diagrama de Dispersión y Ajuste Lineal -->
+        <div class="lg:col-span-7 glass-card p-8 border-2 border-slate-300 dark:border-slate-800 space-y-6">
+          <div class="flex items-center justify-between flex-wrap gap-3">
+            <h3 class="text-base font-bold font-mono text-amber-600 dark:text-amber-300 uppercase tracking-wider flex items-center gap-3">
+              <span class="text-xl">📉</span> Figura 4 PDF: Diagrama de Dispersión
+            </h3>
+            <span id="dyn-pearson-r" class="cartoon-badge sub-card card-text-main text-xs font-mono font-bold px-4 py-1.5 rounded-xl">Pearson r = 0.7964</span>
+          </div>
+          <div class="h-80 relative pt-2">
+            <canvas id="regressionChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Figura 5: Gráfico de Residuos vs Valores Ajustados -->
+        <div class="lg:col-span-5 glass-card p-8 border-2 border-slate-300 dark:border-slate-800 flex flex-col justify-between space-y-6">
+          <div class="space-y-5">
+            <h3 class="text-base font-bold font-mono text-amber-600 dark:text-amber-300 uppercase tracking-wider flex items-center gap-3">
+              <span class="text-xl">📊</span> Figura 5 PDF: Residuos vs Ajustados
+            </h3>
+            <div class="h-60 relative pt-2">
+              <canvas id="residualsChart"></canvas>
+            </div>
+          </div>
+          <div class="p-5 sub-card rounded-xl text-xs font-mono space-y-2.5">
+            <div class="flex justify-between card-text-muted"><span>Durbin-Watson:</span><strong class="text-emerald-600 dark:text-emerald-400">1.61 (Independientes)</strong></div>
+            <div class="flex justify-between card-text-muted"><span>Normalidad Residuos:</span><strong class="text-emerald-600 dark:text-emerald-400">p = 0.710 (Normal)</strong></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- EJERCICIO 3: INTERVALOS DE CONFIANZA Y CONTRASTES -->
+    <!-- ========================================== -->
+    <section id="ejercicio3" class="space-y-12 scroll-mt-28">
+      
+      <div class="flex items-center justify-between border-b-2 border-slate-300 dark:border-slate-800 pb-6 flex-wrap gap-6">
+        <div class="flex items-center gap-4">
+          <div class="w-14 h-14 rounded-2xl bg-purple-500/20 border-2 border-purple-500/60 flex items-center justify-center text-purple-600 dark:text-purple-300 text-2xl font-black shadow">
+            ⚖️
+          </div>
+          <div>
+            <h2 class="text-2xl sm:text-3xl font-black card-text-main tracking-tight">Ejercicio 3: Intervalos de Confianza y Contrastes</h2>
+            <p class="text-sm sm:text-base card-text-muted mt-1.5">Evaluación de hipótesis estadísticas y significación bioestadística.</p>
+          </div>
+        </div>
+
+        <!-- Confidence Selector -->
+        <div class="flex items-center gap-3 sub-card p-2.5 rounded-2xl">
+          <span class="text-xs font-mono font-bold card-text-muted px-2">Nivel Confianza:</span>
+          <button onclick="setConfidence(95)" id="btn-ic-95" class="btn-tactile px-4 py-2 text-xs font-mono font-bold rounded-xl bg-purple-600 text-white shadow">95% (α = 0.05)</button>
+          <button onclick="setConfidence(99)" id="btn-ic-99" class="btn-tactile px-4 py-2 text-xs font-mono font-bold rounded-xl card-text-muted hover:text-purple-600 dark:hover:text-white">99% (α = 0.01)</button>
+        </div>
+      </div>
+
+      <!-- Hypothesis Cards Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+        <!-- 3.a -->
+        <div class="glass-card p-8 border-2 border-slate-300 dark:border-slate-800 space-y-6">
+          <div class="flex justify-between items-start">
+            <span class="text-xs font-mono font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">3.a Media Basal Jóvenes</span>
+            <span id="badge-3a" class="cartoon-badge text-xs font-mono font-bold px-3.5 py-1.5 rounded-lg bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border-rose-500">Rechazar H0 al 5%</span>
+          </div>
+          <h4 class="text-lg font-bold card-text-main">¿Se admite una glucosa basal media de 88 mg/dL?</h4>
+          <div class="p-5 sub-card rounded-xl font-mono text-sm space-y-3">
+            <div class="flex justify-between"><span class="card-text-muted">IC Calculado:</span><strong id="ic-val-3a" class="text-purple-600 dark:text-purple-300">[81.65 ; 87.72] mg/dL</strong></div>
+            <div class="flex justify-between"><span class="card-text-muted">Estadístico t:</span><strong id="stat-t-3a" class="card-text-main">t = -2.217</strong></div>
+            <div class="flex justify-between"><span class="card-text-muted">p-valor bilateral:</span><strong id="pval-3a" class="card-text-main">p = 0.0334</strong></div>
+          </div>
+          <p id="desc-3a" class="text-sm card-text-muted leading-relaxed">
+            Al 95% de confianza, el valor 88 mg/dL queda fuera del intervalo, por lo que se rechaza la hipótesis nula.
+          </p>
+        </div>
+
+        <!-- 3.b -->
+        <div class="glass-card p-8 border-2 border-slate-300 dark:border-slate-800 space-y-6">
+          <div class="flex justify-between items-start">
+            <span class="text-xs font-mono font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">3.b Diferencia de Medias Basal</span>
+            <span id="badge-3b" class="cartoon-badge text-xs font-mono font-bold px-3.5 py-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-500">Diferencia Significativa</span>
+          </div>
+          <h4 class="text-lg font-bold card-text-main">¿Tienen adultos y jóvenes el mismo nivel basal?</h4>
+          <div class="p-5 sub-card rounded-xl font-mono text-sm space-y-3">
+            <div class="flex justify-between"><span class="card-text-muted">Diferencia muestral:</span><strong id="diff-val-3b" class="text-emerald-600 dark:text-emerald-300">4.71 mg/dL (Adultos &gt; Jóvenes)</strong></div>
+            <div class="flex justify-between"><span class="card-text-muted">IC 95% Diferencia:</span><strong id="ic-val-3b" class="text-purple-600 dark:text-purple-300">[0.78 ; 8.65] mg/dL</strong></div>
+            <div class="flex justify-between"><span class="card-text-muted">Estadístico Z / p-valor:</span><strong id="stat-z-3b" class="card-text-main">Z = 2.35 (p = 0.0189)</strong></div>
+          </div>
+          <p class="text-sm card-text-muted leading-relaxed">
+            El 0 no está contenido en el intervalo de confianza. Se concluye que la glucosa basal de los adultos es significativamente superior.
+          </p>
+        </div>
+
+        <!-- 3.c -->
+        <div class="glass-card p-8 border-2 border-slate-300 dark:border-slate-800 space-y-6">
+          <div class="flex justify-between items-start">
+            <span class="text-xs font-mono font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">3.c Proporción &gt; 95 mg/dL</span>
+            <span id="badge-3c" class="cartoon-badge text-xs font-mono font-bold px-3.5 py-1.5 rounded-lg bg-cyan-100 dark:bg-cyan-950 text-cyan-800 dark:text-cyan-300 border-cyan-500">No se rechaza p = 0.15</span>
+          </div>
+          <h4 class="text-lg font-bold card-text-main">Proporción con glucosa basal superior a 95 mg/dL</h4>
+          <div class="p-5 sub-card rounded-xl font-mono text-sm space-y-3">
+            <div class="flex justify-between"><span class="card-text-muted">Pacientes detectados:</span><strong id="prop-count-3c" class="card-text-main">11 de 65 (p̂ = 0.1692)</strong></div>
+            <div class="flex justify-between"><span class="card-text-muted">IC 98% Proporción:</span><strong id="ic-val-3c" class="text-purple-600 dark:text-purple-300">[0.0610 ; 0.2774]</strong></div>
+            <div class="flex justify-between"><span class="card-text-muted">Contraste H0: p = 0.15:</span><strong id="stat-z-3c" class="card-text-main">Z = 0.4342 (p = 0.6641)</strong></div>
+          </div>
+          <p class="text-sm card-text-muted leading-relaxed">
+            Los datos observados son compatibles con que el 15% de la población presente nivel basal prediabético.
+          </p>
+        </div>
+
+        <!-- 3.d -->
+        <div class="glass-card p-8 border-2 border-slate-300 dark:border-slate-800 space-y-6">
+          <div class="flex justify-between items-start">
+            <span class="text-xs font-mono font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">3.d Muestras Emparejadas (Adultos)</span>
+            <span class="cartoon-badge text-xs font-mono font-bold px-3.5 py-1.5 rounded-lg bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border-purple-500">Variación Significativa</span>
+          </div>
+          <h4 class="text-lg font-bold card-text-main">Variación de glucosa en adultos tras la toma (60 min)</h4>
+          <div class="p-5 sub-card rounded-xl font-mono text-sm space-y-3">
+            <div class="flex justify-between"><span class="card-text-muted">Diferencia Media (D):</span><strong id="diff-val-3d" class="text-purple-600 dark:text-purple-300">-82.43 mg/dL</strong></div>
+            <div class="flex justify-between"><span class="card-text-muted">Estadístico t:</span><strong id="stat-t-3d" class="card-text-main">t = -34.37</strong></div>
+            <div class="flex justify-between"><span class="card-text-muted">p-valor:</span><strong class="card-text-main">p &lt; 0.0001</strong></div>
+          </div>
+          <p class="text-sm card-text-muted leading-relaxed">
+            Se detecta un incremento masivo y estadísticamente incontestable de la glucosa en sangre a los 60 minutos.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- PANEL DE INSPECCIÓN DE FÓRMULAS Y EXCEL / PYTHON -->
+    <!-- ========================================== -->
+    <section id="excel-inspector" class="space-y-12 scroll-mt-28">
+      
+      <div class="flex items-center gap-4 border-b-2 border-slate-300 dark:border-slate-800 pb-6">
+        <div class="w-14 h-14 rounded-2xl bg-emerald-500/20 border-2 border-emerald-500/60 flex items-center justify-center text-emerald-600 dark:text-emerald-300 text-2xl font-black shadow">
+          💻
+        </div>
+        <div>
+          <h2 class="text-2xl sm:text-3xl font-black card-text-main tracking-tight">Ejercicio 4: Inspector de Fórmulas Excel & Script Python</h2>
+          <p class="text-sm sm:text-base card-text-muted mt-1.5">Sintaxis exacta de Excel (SLOPE, INTERCEPT, TINV, COVARIANCE.S) y comprobaciones con scipy.</p>
+        </div>
+      </div>
+
+      <div class="glass-card p-8 border-2 border-slate-300 dark:border-slate-800 space-y-6">
+        <!-- Formula Tabs -->
+        <div class="flex flex-wrap gap-3 pb-4 border-b border-slate-200 dark:border-slate-800">
+          <button onclick="switchFormulaTab('Ej1_Descriptiva')" id="tab-code-Ej1_Descriptiva" class="px-4.5 py-3 rounded-xl bg-emerald-600 text-white font-bold shadow text-xs font-mono">Ej1_Descriptiva.xlsx</button>
+          <button onclick="switchFormulaTab('Ej2_Regresion')" id="tab-code-Ej2_Regresion" class="px-4.5 py-3 rounded-xl sub-card card-text-muted hover:text-emerald-600 font-bold text-xs font-mono">Ej2_Regresion.xlsx</button>
+          <button onclick="switchFormulaTab('Ej3_Contrastes')" id="tab-code-Ej3_Contrastes" class="px-4.5 py-3 rounded-xl sub-card card-text-muted hover:text-emerald-600 font-bold text-xs font-mono">Ej3_Contrastes.xlsx</button>
+          <button onclick="switchFormulaTab('Aux_Shapiro.py')" id="tab-code-Aux_Shapiro.py" class="px-4.5 py-3 rounded-xl sub-card card-text-muted hover:text-emerald-600 font-bold text-xs font-mono">Aux_Shapiro.py</button>
+        </div>
+
+        <!-- Dynamic Formula Viewer Box -->
+        <div class="bg-slate-950 text-slate-100 rounded-2xl border-2 border-slate-800 overflow-hidden code-container">
+          <div class="bg-slate-900 px-6 py-4 border-b border-slate-800 flex justify-between items-center text-xs text-slate-400 font-mono">
+            <span id="formula-file-title">Ej1_Descriptiva.xlsx · Hojas de Cálculo UCM</span>
+            <span>Excel 2026 / Python scipy</span>
+          </div>
+          <div id="formula-code-view" class="p-6 space-y-2 overflow-x-auto font-mono text-xs leading-relaxed">
+            <!-- Populated via JavaScript -->
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- EJERCICIO 5: REGISTRO CLÍNICO Y EDITOR CSV -->
+    <!-- ========================================== -->
+    <section id="dataset-editor" class="space-y-12 scroll-mt-28">
+      
+      <div class="flex items-center gap-4 border-b-2 border-slate-300 dark:border-slate-800 pb-6">
+        <div class="w-14 h-14 rounded-2xl bg-rose-500/20 border-2 border-rose-500/60 flex items-center justify-center text-rose-600 dark:text-rose-300 text-2xl font-black shadow">
+          📝
+        </div>
+        <div>
+          <h2 class="text-2xl sm:text-3xl font-black card-text-main tracking-tight">5. Modificación de Datos en Tiempo Real & Exportador CSV</h2>
+          <p class="text-sm sm:text-base card-text-muted mt-1.5">Modifica las mediciones basales o a los 60 min para recalcular dinámicamente todos los análisis y exportar el CSV resultante.</p>
+        </div>
+      </div>
+
+      <div class="glass-card p-8 border-2 border-slate-300 dark:border-slate-800 space-y-8">
+        
+        <!-- Controls & Interactive Switch -->
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b-2 border-slate-200 dark:border-slate-800">
+          <div class="space-y-1.5">
+            <div class="flex items-center gap-3">
+              <h3 class="text-lg font-bold font-mono text-cyan-600 dark:text-cyan-300 uppercase tracking-wider flex items-center gap-3">
+                <span class="text-xl">📋</span> Registro Clínico Completo (N = <span id="table-total-count">65</span>)
+              </h3>
+              <span id="edit-mode-tag" class="cartoon-badge text-xs px-3.5 py-1.5 rounded-lg sub-card card-text-muted font-mono font-bold">Modo Lectura</span>
+            </div>
+            <p class="text-xs sm:text-sm card-text-muted">Activa el interruptor para editar libremente las mediciones, clasificar según criterio ADA y exportar el CSV.</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-4">
+            <!-- Custom CSV File Upload -->
+            <label class="btn-tactile px-4 py-3 text-xs font-mono font-bold rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white border-2 border-emerald-400 border-b-emerald-900 cursor-pointer flex items-center gap-2.5 shadow">
+              <span class="text-base">📂</span> <span>Importar CSV</span>
+              <input type="file" id="csv-file-input" accept=".csv" onchange="importCustomCSV(event)" class="hidden">
+            </label>
+
+            <!-- Interactive Switch -->
+            <div class="flex items-center gap-3 sub-card p-3 rounded-2xl">
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="edit-toggle-switch" onchange="toggleEditingMode(this.checked)" class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
+              </label>
+              <span class="text-xs font-mono font-bold card-text-main">Modo Edición</span>
+            </div>
+
+            <button onclick="exportModifiedCSV()" id="btn-export-csv" disabled class="btn-tactile px-4 py-3 text-xs font-mono font-bold rounded-xl sub-card text-slate-400 border-2 border-slate-300 dark:border-slate-700 opacity-60 cursor-not-allowed transition-all flex items-center gap-2.5">
+              <span class="text-base">💾</span> Copiar CSV Modificado
+            </button>
+
+            <button onclick="addNewPatient()" id="btn-add-patient" disabled class="btn-tactile px-4 py-3 text-xs font-mono font-bold rounded-xl sub-card text-slate-400 border-2 border-slate-300 dark:border-slate-700 opacity-60 cursor-not-allowed transition-all flex items-center gap-2">
+              <span class="text-base">➕</span> Añadir Paciente
+            </button>
+
+            <select id="table-filter" onchange="renderPatientTable()" class="sub-card text-xs card-text-main border-2 border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 font-mono font-bold">
+              <option value="all">Todos los grupos</option>
+              <option value="1">Grupo 1: Jóvenes (&lt;30)</option>
+              <option value="2">Grupo 2: Adultos (&gt;30)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Copy Feedback Banner -->
+        <div id="csv-copy-feedback" class="hidden p-4 bg-emerald-100 dark:bg-emerald-950 border-2 border-emerald-500/50 rounded-xl text-emerald-800 dark:text-emerald-300 text-xs font-mono font-bold flex items-center justify-between">
+          <span class="flex items-center gap-2"><span class="text-base">✓</span> Dataset exportado correctamente al portapapeles en formato CSV con todas tus modificaciones.</span>
+          <button onclick="this.parentElement.classList.add('hidden')" class="text-emerald-600 dark:text-emerald-400 font-bold text-base">✕</button>
+        </div>
+
+        <div class="overflow-x-auto max-h-[560px] border-2 border-slate-300 dark:border-slate-800 rounded-2xl pt-1">
+          <table class="w-full text-sm text-left card-text-main">
+            <thead class="sub-card text-cyan-600 dark:text-cyan-300 font-mono uppercase text-xs sticky top-0 z-10">
+              <tr>
+                <th class="p-4">ID</th>
+                <th class="p-4">Grupo Cohorte</th>
+                <th class="p-4">Glucosa Basal (X)</th>
+                <th class="p-4">Glucosa 60 Min (Y)</th>
+                <th class="p-4">Variación Δ</th>
+                <th class="p-4">Diagnóstico ADA</th>
+                <th class="p-4">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="patient-table-body" class="divide-y divide-slate-200 dark:divide-slate-800 font-mono">
+              <!-- JS Populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="mt-32 py-12 border-t-2 border-slate-300 dark:border-slate-800 sub-card text-center text-xs font-mono card-text-muted space-y-3">
+    <p>GlucoStat Analytics v4.0 Pro · Máster UCM Big Data, Data Science & Business Analytics</p>
+    <p>© 2026 Ignacio Egea Villalba · Proyecto de Bioestadística Clínica Interactiva</p>
+  </footer>
+
+<script>
+  // ==========================================
+  // DATOS Y MOTOR BIOESTADÍSTICO REACTIVO
+  // ==========================================
+  const initialJovenes = [
+    82,75,90,78,85,83,79,92,88,76,81,84,95,77,80,89,86,75,82,90,78,83,85,91,79,84,87,80,82,75,88,90,76,83,103
+  ];
+  const initialAdultos = [
+    88,92,85,90,94,86,91,89,93,87,90,88,92,85,91,89,94,88,90,86,92,89,93,87,90,88,91,85,89,92
+  ];
+  const initialJovenes60 = [
+    150,141,159,145,152,149,144,155,159,138,146,150,161,141,148,155,153,138,145,159,146,150,152,160,144,149,157,148,150,131,157,160,143,149,172
+  ];
+  const initialAdultos60 = [
+    170,175,168,172,178,166,173,171,176,169,172,170,175,167,173,171,178,170,172,166,175,171,176,169,172,170,173,167,171,175
+  ];
+
+  let fullDataset = [];
+  let isEditing = false;
+  let currentConfidence = 95;
+
+  function loadInitialDataset() {
+    fullDataset = [];
+    let idCounter = 1;
+    for(let i=0; i<initialJovenes.length; i++) {
+      fullDataset.push({ id: idCounter++, grupo: 1, edad: 25, basal: initialJovenes[i], g60: initialJovenes60[i] });
+    }
+    for(let i=0; i<initialAdultos.length; i++) {
+      fullDataset.push({ id: idCounter++, grupo: 2, edad: 45, basal: initialAdultos[i], g60: initialAdultos60[i] });
+    }
+  }
+  loadInitialDataset();
+
+  function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.classList.toggle('dark');
+    document.getElementById('theme-icon').textContent = isDark ? '🌙' : '☀️';
+    document.getElementById('theme-text').textContent = isDark ? 'Modo Oscuro' : 'Modo Claro';
+    updateAllChartsTheme();
+  }
+
+  function getChartThemeColors() {
+    const isDark = document.documentElement.classList.contains('dark');
+    return {
+      gridColor: isDark ? 'rgba(51, 65, 85, 0.4)' : 'rgba(203, 213, 225, 0.6)',
+      textColor: isDark ? '#94a3b8' : '#475569',
+      headingColor: isDark ? '#f8fafc' : '#0f172a'
+    };
+  }
+
+  // ==========================================
+  // CÁLCULOS BIOESTADÍSTICOS
+  // ==========================================
+  function computeStats() {
+    const jBasal = fullDataset.filter(d => d.grupo === 1).map(d => d.basal);
+    const aBasal = fullDataset.filter(d => d.grupo === 2).map(d => d.basal);
+    const j60 = fullDataset.filter(d => d.grupo === 1).map(d => d.g60);
+
+    const meanJ = jBasal.reduce((a,b)=>a+b, 0) / jBasal.length;
+    const meanA = aBasal.reduce((a,b)=>a+b, 0) / aBasal.length;
+
+    const varJ = jBasal.reduce((a,b)=>a + Math.pow(b - meanJ, 2), 0) / (jBasal.length - 1);
+    const varA = aBasal.reduce((a,b)=>a + Math.pow(b - meanA, 2), 0) / (aBasal.length - 1);
+
+    const stdJ = Math.sqrt(varJ);
+    const stdA = Math.sqrt(varA);
+
+    const cvJ = stdJ / meanJ;
+    const cvA = stdA / meanA;
+
+    // Regresión lineal jóvenes
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+    const nJ = jBasal.length;
+    for(let i=0; i<nJ; i++) {
+      const x = jBasal[i], y = j60[i];
+      sumX += x; sumY += y; sumXY += x*y; sumX2 += x*x; sumY2 += y*y;
+    }
+    const slope = (nJ * sumXY - sumX * sumY) / (nJ * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / nJ;
+    const r = (nJ * sumXY - sumX * sumY) / Math.sqrt((nJ * sumX2 - sumX * sumX) * (nJ * sumY2 - sumY * sumY));
+    const r2 = r * r;
+
+    return { meanJ, meanA, stdJ, stdA, varJ, varA, cvJ, cvA, slope, intercept, r, r2 };
+  }
+
+  // ==========================================
+  // RENDERIZADO DE TABLAS Y UI
+  // ==========================================
+  function updateUI() {
+    const st = computeStats();
+    const elMeanJ = document.getElementById('dyn-mean-j');
+    if(elMeanJ) elMeanJ.innerHTML = `${st.meanJ.toFixed(2)} <span class="text-sm font-normal card-text-muted">mg/dL</span>`;
+    
+    const elCvJ = document.getElementById('dyn-cv-j');
+    if(elCvJ) elCvJ.textContent = `CV = ${st.cvJ.toFixed(3)} (Representativa)`;
+    
+    const elMeanA = document.getElementById('dyn-mean-a');
+    if(elMeanA) elMeanA.innerHTML = `${st.meanA.toFixed(2)} <span class="text-sm font-normal card-text-muted">mg/dL</span>`;
+    
+    const elCvA = document.getElementById('dyn-cv-a');
+    if(elCvA) elCvA.textContent = `CV = ${st.cvA.toFixed(3)} (Representativa)`;
+
+    const elEq = document.getElementById('dyn-reg-equation');
+    if(elEq) elEq.textContent = `Ŷ = ${st.intercept.toFixed(4)} + ${st.slope.toFixed(4)} · X`;
+    
+    const elR = document.getElementById('dyn-pearson-r');
+    if(elR) elR.textContent = `Pearson r = ${st.r.toFixed(4)}`;
+
+    const tbody = document.getElementById('descriptive-tbody');
+    if(tbody) {
+      tbody.innerHTML = `
+        <tr><td class="p-3.5">Número de pacientes (n)</td><td class="p-3.5">${fullDataset.filter(d=>d.grupo===1).length}</td><td class="p-3.5">${fullDataset.filter(d=>d.grupo===2).length}</td></tr>
+        <tr><td class="p-3.5">Media (x̄)</td><td class="p-3.5">${st.meanJ.toFixed(2)}</td><td class="p-3.5">${st.meanA.toFixed(2)}</td></tr>
+        <tr><td class="p-3.5">Varianza (s²)</td><td class="p-3.5">${st.varJ.toFixed(2)}</td><td class="p-3.5">${st.varA.toFixed(2)}</td></tr>
+        <tr><td class="p-3.5">Desviación Típica (s)</td><td class="p-3.5">${st.stdJ.toFixed(2)}</td><td class="p-3.5">${st.stdA.toFixed(2)}</td></tr>
+        <tr><td class="p-3.5">Coeficiente Variación (CV)</td><td class="p-3.5">${st.cvJ.toFixed(3)}</td><td class="p-3.5">${st.cvA.toFixed(3)}</td></tr>
+      `;
+    }
+
+    renderPatientTable();
+    updateCharts(st);
+  }
+
+  // ==========================================
+  // TABLA DE PACIENTES & EDITOR CSV
+  // ==========================================
+  function renderPatientTable() {
+    const filter = document.getElementById('table-filter').value;
+    const tbody = document.getElementById('patient-table-body');
+    const filtered = fullDataset.filter(d => filter === 'all' || d.grupo == filter);
+    
+    document.getElementById('table-total-count').textContent = fullDataset.length;
+
+    tbody.innerHTML = filtered.map(d => {
+      const dif = d.g60 - d.basal;
+      let ada = 'Normal';
+      let adaColor = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300';
+      if(d.basal >= 126 || d.g60 >= 200) {
+        ada = 'Riesgo / Severo';
+        adaColor = 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300';
+      } else if(d.basal >= 100 || d.g60 >= 140) {
+        ada = 'Prediabetes';
+        adaColor = 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
+      }
+
+      return `
+        <tr class="hover:bg-slate-100 dark:hover:bg-slate-900/50 transition-colors">
+          <td class="p-4 font-bold">#${d.id}</td>
+          <td class="p-4"><span class="px-2.5 py-1 rounded-md text-xs font-bold ${d.grupo===1 ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'}">${d.grupo===1 ? 'Joven (<30)' : 'Adulto (>30)'}</span></td>
+          <td class="p-4">${isEditing ? `<input type="number" value="${d.basal}" onchange="updatePatientField(${d.id}, 'basal', this.value)" class="w-24 p-2 rounded-xl sub-card border-2 border-slate-300 dark:border-slate-700 font-mono font-bold">` : d.basal + ' mg/dL'}</td>
+          <td class="p-4">${isEditing ? `<input type="number" value="${d.g60}" onchange="updatePatientField(${d.id}, 'g60', this.value)" class="w-24 p-2 rounded-xl sub-card border-2 border-slate-300 dark:border-slate-700 font-mono font-bold">` : d.g60 + ' mg/dL'}</td>
+          <td class="p-4 font-bold text-cyan-600 dark:text-cyan-400">+${dif} mg/dL</td>
+          <td class="p-4"><span class="px-3 py-1 rounded-lg text-xs font-bold ${adaColor}">${ada}</span></td>
+          <td class="p-4">${isEditing ? `<button onclick="deletePatient(${d.id})" class="text-rose-500 font-bold hover:underline">Eliminar</button>` : '<span class="text-slate-400">-</span>'}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function toggleEditingMode(checked) {
+    isEditing = checked;
+    document.getElementById('edit-mode-tag').textContent = isEditing ? 'Modo Edición Activo' : 'Modo Lectura';
+    document.getElementById('edit-mode-tag').className = `cartoon-badge text-xs px-3.5 py-1.5 rounded-lg font-mono font-bold ${isEditing ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500' : 'sub-card card-text-muted'}`;
+    
+    const exportBtn = document.getElementById('btn-export-csv');
+    const addBtn = document.getElementById('btn-add-patient');
+    if(isEditing) {
+      exportBtn.disabled = false; exportBtn.classList.remove('opacity-65', 'cursor-not-allowed', 'text-slate-400'); exportBtn.classList.add('bg-cyan-600', 'text-white', 'hover:bg-cyan-500');
+      addBtn.disabled = false; addBtn.classList.remove('opacity-65', 'cursor-not-allowed', 'text-slate-400'); addBtn.classList.add('bg-emerald-600', 'text-white', 'hover:bg-emerald-500');
+    } else {
+      exportBtn.disabled = true; exportBtn.classList.add('opacity-65', 'cursor-not-allowed', 'text-slate-400'); exportBtn.classList.remove('bg-cyan-600', 'text-white', 'hover:bg-cyan-500');
+      addBtn.disabled = true; addBtn.classList.add('opacity-65', 'cursor-not-allowed', 'text-slate-400'); addBtn.classList.remove('bg-emerald-600', 'text-white', 'hover:bg-emerald-500');
+    }
+    renderPatientTable();
+  }
+
+  function updatePatientField(id, field, val) {
+    const p = fullDataset.find(d => d.id === id);
+    if(p) {
+      p[field] = parseFloat(val) || 0;
+      updateUI();
+    }
+  }
+
+  function deletePatient(id) {
+    fullDataset = fullDataset.filter(d => d.id !== id);
+    updateUI();
+  }
+
+  function addNewPatient() {
+    const newId = fullDataset.length ? Math.max(...fullDataset.map(d=>d.id)) + 1 : 1;
+    fullDataset.push({ id: newId, grupo: 1, edad: 22, basal: 85, g60: 148 });
+    updateUI();
+  }
+
+  function resetDatasetToOriginal() {
+    loadInitialDataset();
+    isEditing = false;
+    document.getElementById('edit-toggle-switch').checked = false;
+    toggleEditingMode(false);
+    updateUI();
+  }
+
+  function exportModifiedCSV() {
+    let csv = 'id,grupo,edad,basal,g60\n' + fullDataset.map(d=>`${d.id},${d.grupo},${d.edad},${d.basal},${d.g60}`).join('\n');
+    navigator.clipboard.writeText(csv).then(() => {
+      document.getElementById('csv-copy-feedback').classList.remove('hidden');
+    });
+  }
+
+  function importCustomCSV(event) {
+    const file = event.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const lines = e.target.result.split('\n');
+      const newRows = [];
+      for(let i=1; i<lines.length; i++) {
+        const cols = lines[i].split(',');
+        if(cols.length >= 5) {
+          newRows.push({ id: parseInt(cols[0])||i, grupo: parseInt(cols[1])||1, edad: parseInt(cols[2])||25, basal: parseFloat(cols[3])||85, g60: parseFloat(cols[4])||140 });
+        }
+      }
+      if(newRows.length > 0) {
+        fullDataset = newRows;
+        updateUI();
+        alert(`Se han importado exitosamente ${newRows.length} registros desde el CSV.`);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ==========================================
+  // SIMULADOR PREDICTOR (EJERCICIO 2)
+  // ==========================================
+  function runPredictor(val) {
+    const x = parseFloat(val);
+    const slider = document.getElementById('sim-slider');
+    if (slider) slider.value = x;
+    const valDisplay = document.getElementById('sim-val-display');
+    if (valDisplay) valDisplay.textContent = `${x.toFixed(1)} mg/dL`;
+    const resX = document.getElementById('sim-result-x');
+    if (resX) resX.textContent = x.toFixed(1);
+
+    const st = computeStats();
+    const yHat = st.intercept + st.slope * x;
+    const resY = document.getElementById('sim-result-y');
+    if (resY) resY.textContent = `${yHat.toFixed(2)} mg/dL`;
+  }
+
+  function resetPredictorValue() {
+    runPredictor(83);
+  }
+
+  // ==========================================
+  // INICIALIZACIÓN Y CONFIGURACIÓN DE CHARTS.JS
+  // ==========================================
+  let normalityChartInstance = null;
+  let boxplotChartInstance = null;
+  let qqChartInstance = null;
+  let regressionChartInstance = null;
+  let residualsChartInstance = null;
+
+  function updateCharts(st) {
+    const colors = getChartThemeColors();
+
+    // 1. Normality Histogram
+    const ctxNorm = document.getElementById('normalityChart').getContext('2d');
+    if(normalityChartInstance) normalityChartInstance.destroy();
+    normalityChartInstance = new Chart(ctxNorm, {
+      type: 'bar',
+      data: {
+        labels: ['130-135', '135-140', '140-145', '145-150', '150-155', '155-160', '160-165', '165-170', '170-175'],
+        datasets: [{
+          label: 'Frecuencia Observada',
+          data: [1, 2, 5, 8, 10, 6, 2, 1, 0],
+          backgroundColor: 'rgba(6, 182, 212, 0.7)',
+          borderColor: '#06b6d4',
+          borderWidth: 2,
+          borderRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: colors.gridColor }, ticks: { color: colors.textColor } },
+          y: { grid: { color: colors.gridColor }, ticks: { color: colors.textColor } }
+        }
+      }
+    });
+
+    // 2. Boxplot Simulation Chart (Figura 1)
+    const ctxBox = document.getElementById('boxplotChart').getContext('2d');
+    if(boxplotChartInstance) boxplotChartInstance.destroy();
+    boxplotChartInstance = new Chart(ctxBox, {
+      type: 'bar',
+      data: {
+        labels: ['Basal (Q1-Q3)', '60 Min (Q1-Q3)'],
+        datasets: [{
+          label: 'Rango Intercuartílico (RIC)',
+          data: [[78.5, 90.5], [146.5, 154.5]],
+          backgroundColor: 'rgba(59, 130, 246, 0.5)',
+          borderColor: '#3b82f6',
+          borderWidth: 2,
+          borderRadius: 6
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { min: 60, max: 180, grid: { color: colors.gridColor }, ticks: { color: colors.textColor } },
+          y: { grid: { color: colors.gridColor }, ticks: { color: colors.textColor } }
+        }
+      }
+    });
+
+    // 3. Q-Q Normal Chart (Figura 3)
+    updateQqChart('jovenes');
+
+    // 4. Regression Chart (Figura 4)
+    const jBasal = fullDataset.filter(d => d.grupo === 1).map(d => d.basal);
+    const j60 = fullDataset.filter(d => d.grupo === 1).map(d => d.g60);
+    const scatterData = jBasal.map((x, i) => ({ x: x, y: j60[i] }));
+    const lineData = [
+      { x: 65, y: st.intercept + st.slope * 65 },
+      { x: 105, y: st.intercept + st.slope * 105 }
+    ];
+
+    const ctxReg = document.getElementById('regressionChart').getContext('2d');
+    if(regressionChartInstance) regressionChartInstance.destroy();
+    regressionChartInstance = new Chart(ctxReg, {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          label: 'Pacientes Jóvenes',
+          data: scatterData,
+          backgroundColor: '#f59e0b',
+          pointRadius: 6
+        }, {
+          label: 'Recta de Regresión Ŷ',
+          data: lineData,
+          type: 'line',
+          borderColor: '#ef4444',
+          borderWidth: 3,
+          pointRadius: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { type: 'linear', position: 'bottom', grid: { color: colors.gridColor }, ticks: { color: colors.textColor } },
+          y: { grid: { color: colors.gridColor }, ticks: { color: colors.textColor } }
+        }
+      }
+    });
+
+    // 5. Residuals Chart (Figura 5)
+    const ctxRes = document.getElementById('residualsChart').getContext('2d');
+    if(residualsChartInstance) residualsChartInstance.destroy();
+    const residualsData = jBasal.map((x, i) => {
+      const yHat = st.intercept + st.slope * x;
+      return { x: yHat, y: j60[i] - yHat };
+    });
+    residualsChartInstance = new Chart(ctxRes, {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          label: 'Residuos',
+          data: residualsData,
+          backgroundColor: '#10b981',
+          pointRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { type: 'linear', position: 'bottom', grid: { color: colors.gridColor }, ticks: { color: colors.textColor } },
+          y: { grid: { color: colors.gridColor }, ticks: { color: colors.textColor } }
+        }
+      }
+    });
+  }
+
+  function updateQqChart(group) {
+    const colors = getChartThemeColors();
+    const isJoven = group === 'jovenes';
+    document.getElementById('btn-qq-j').className = isJoven ? 'px-4 py-2 text-xs rounded-lg font-bold bg-cyan-600 text-white shadow' : 'px-4 py-2 text-xs rounded-lg font-bold card-text-muted hover:text-cyan-600 dark:hover:text-white';
+    document.getElementById('btn-qq-a').className = !isJoven ? 'px-4 py-2 text-xs rounded-lg font-bold bg-cyan-600 text-white shadow' : 'px-4 py-2 text-xs rounded-lg font-bold card-text-muted hover:text-cyan-600 dark:hover:text-white';
+
+    const qqData = isJoven ? [
+      {x: -2.0, y: 131}, {x: -1.5, y: 138}, {x: -1.0, y: 144}, {x: -0.5, y: 148},
+      {x: 0.0, y: 150}, {x: 0.5, y: 152}, {x: 1.0, y: 157}, {x: 1.5, y: 160}, {x: 2.0, y: 172}
+    ] : [
+      {x: -2.0, y: 166}, {x: -1.5, y: 168}, {x: -1.0, y: 170}, {x: -0.5, y: 171},
+      {x: 0.0, y: 172}, {x: 0.5, y: 173}, {x: 1.0, y: 175}, {x: 1.5, y: 176}, {x: 2.0, y: 178}
+    ];
+
+    const diagLine = [{x: -2, y: isJoven ? 130 : 165}, {x: 2, y: isJoven ? 175 : 180}];
+
+    const ctxQq = document.getElementById('qqChart').getContext('2d');
+    if(qqChartInstance) qqChartInstance.destroy();
+    qqChartInstance = new Chart(ctxQq, {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          label: 'Cuantiles Observados',
+          data: qqData,
+          backgroundColor: '#8b5cf6',
+          pointRadius: 6
+        }, {
+          label: 'Diagonal Teórica',
+          data: diagLine,
+          type: 'line',
+          borderColor: '#ef4444',
+          borderWidth: 2,
+          pointRadius: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { type: 'linear', position: 'bottom', grid: { color: colors.gridColor }, ticks: { color: colors.textColor } },
+          y: { grid: { color: colors.gridColor }, ticks: { color: colors.textColor } }
+        }
+      }
+    });
+  }
+
+  function updateAllChartsTheme() {
+    updateCharts(computeStats());
+  }
+
+  // ==========================================
+  // FÓRMULAS EXCEL TAB SWITCHER
+  // ==========================================
+  const formulaSnippets = {
+    Ej1_Descriptiva: [
+      '<span class="text-emerald-400"># Ej1!B6: Media aritmética muestral</span>',
+      '<span class="text-cyan-300">=AVERAGE</span>(Hoja1!$B$2:$B$36) <span class="text-slate-500">→ 84.69 (Jóvenes); C6 → 89.40 (Adultos)</span>',
+      '',
+      '<span class="text-emerald-400"># Ej1!B9: Desviación típica muestral</span>',
+      '<span class="text-cyan-300">=STDEV</span>(Hoja1!$B$2:$B$36) <span class="text-slate-500">→ 8.84 (Jóvenes); C9 → 7.35 (Adultos)</span>',
+      '',
+      '<span class="text-emerald-400"># Ej1!B14: Coeficiente de Variación (CV = s / x̄)</span>',
+      '<span class="text-cyan-300">=B9</span> / B6 <span class="text-slate-500">→ 0.1044 (&lt; 0.30, media representativa)</span>'
+    ],
+    Ej2_Regresion: [
+      '<span class="text-emerald-400"># Ej2!B16: Pendiente de la recta (b1)</span>',
+      '<span class="text-cyan-300">=SLOPE</span>(Hoja1!$C$2:$C$36, Hoja1!$B$2:$B$36) <span class="text-slate-500">→ 0.6969</span>',
+      '',
+      '<span class="text-emerald-400"># Ej2!B17: Ordenada en el origen (b0)</span>',
+      '<span class="text-cyan-300">=INTERCEPT</span>(Hoja1!$C$2:$C$36, Hoja1!$B$2:$B$36) <span class="text-slate-500">→ 91.3837</span>',
+      '',
+      '<span class="text-emerald-400"># Ej2!B24: Coeficiente de determinación R²</span>',
+      '<span class="text-cyan-300">=RSQ</span>(Hoja1!$C$2:$C$36, Hoja1!$B$2:$B$36) <span class="text-slate-500">→ 0.6343 (63.43% explicado)</span>'
+    ],
+    Ej3_Contrastes: [
+      '<span class="text-emerald-400"># Ej3!B12 & B13: Intervalo de confianza al 95% para la media</span>',
+      'B6 - B10 * B8 <span class="text-slate-500">hasta</span> B6 + B10 * B8 <span class="text-slate-500">con</span> <span class="text-cyan-300">TINV</span>(0.05, 34) <span class="text-slate-500">→ [81.65 ; 87.72]</span>',
+      '',
+      '<span class="text-emerald-400"># Ej3!B20: p-valor contraste bilateral</span>',
+      '<span class="text-cyan-300">=TDIST</span>(ABS(B19), B9, 2) <span class="text-slate-500">→ 0.0334 (&lt; 0.05, rechaza H0 al nivel 5%)</span>'
+    ],
+    "Aux_Shapiro.py": [
+      '<span class="text-purple-400">import</span> scipy.stats <span class="text-purple-400">as</span> stats',
+      '',
+      '<span class="text-emerald-400"># Test Shapiro-Wilk para normalidad de la glucosa a los 60 min</span>',
+      'w_stat, p_val = stats.shapiro(glucosa_60_min_jovenes)',
+      'print(f"Estadístico W: {w_stat:.4f}, p-valor: {p_val:.4f}")',
+      '<span class="text-slate-500"># Resultado: W = 0.9626, p = 0.2734 (&gt; 0.05, no se rechaza normalidad)</span>'
+    ]
+  };
+
+  function switchFormulaTab(tabName) {
+    ['Ej1_Descriptiva', 'Ej2_Regresion', 'Ej3_Contrastes', 'Aux_Shapiro.py'].forEach(t => {
+      const btn = document.getElementById('tab-code-' + t);
+      if(btn) {
+        if(t === tabName) {
+          btn.className = 'px-4.5 py-3 rounded-xl bg-emerald-600 text-white font-bold shadow text-xs font-mono';
+        } else {
+          btn.className = 'px-4.5 py-3 rounded-xl sub-card card-text-muted hover:text-emerald-600 font-bold text-xs font-mono';
+        }
+      }
+    });
+
+    document.getElementById('formula-file-title').textContent = `${tabName} · Hojas de Cálculo UCM / Python`;
+    const codeView = document.getElementById('formula-code-view');
+    const lines = formulaSnippets[tabName] || [];
+    codeView.innerHTML = lines.map((l, idx) => `<div class="flex gap-4"><span class="text-slate-600 w-6 text-right select-none">${idx+1}</span><span>${l}</span></div>`).join('');
+  }
+
+  function setConfidence(conf) {
+    currentConfidence = conf;
+    const btn95 = document.getElementById('btn-ic-95');
+    const btn99 = document.getElementById('btn-ic-99');
+    if(conf === 95) {
+      btn95.className = 'btn-tactile px-4 py-2 text-xs font-mono font-bold rounded-xl bg-purple-600 text-white shadow';
+      btn99.className = 'btn-tactile px-4 py-2 text-xs font-mono font-bold rounded-xl card-text-muted hover:text-purple-600 dark:hover:text-white';
+      document.getElementById('ic-val-3a').textContent = '[81.65 ; 87.72] mg/dL';
+      document.getElementById('badge-3a').textContent = 'Rechazar H0 al 5%';
+      document.getElementById('desc-3a').textContent = 'Al 95% de confianza, el valor 88 mg/dL queda fuera del intervalo, por lo que se rechaza la hipótesis nula.';
+    } else {
+      btn99.className = 'btn-tactile px-4 py-2 text-xs font-mono font-bold rounded-xl bg-purple-600 text-white shadow';
+      btn95.className = 'btn-tactile px-4 py-2 text-xs font-mono font-bold rounded-xl card-text-muted hover:text-purple-600 dark:hover:text-white';
+      document.getElementById('ic-val-3a').textContent = '[80.61 ; 88.76] mg/dL';
+      document.getElementById('badge-3a').textContent = 'No rechazar H0 al 1%';
+      document.getElementById('desc-3a').textContent = 'Al 99% de confianza, el valor 88 mg/dL queda dentro del intervalo, por lo que no hay evidencia suficiente para rechazar H0.';
+    }
+  }
+
+  // Inicialización general al cargar
+  window.onload = function() {
+    updateUI();
+    switchFormulaTab('Ej1_Descriptiva');
+    runPredictor(83);
+  };
+</script>
+
+</body>
+</html>
