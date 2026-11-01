@@ -745,7 +745,9 @@
     }
 
     renderPatientTable();
+    quietRedraw = chartsReady;
     updateCharts(st);
+    quietRedraw = false;
   }
 
   // ==========================================
@@ -917,6 +919,10 @@
   let currentPredictorX = 83;
   let currentQqGroup = 'jovenes';
   let currentNormGroup = 'jovenes';
+  // Redibujado sin animación al editar datos o cambiar de tema (evita el parpadeo)
+  let chartsReady = false;
+  let quietRedraw = false;
+  function chartAnimOpts() { return quietRedraw ? { animation: false } : {}; }
   let residualsChartInstance = null;
 
   function updateCharts(st) {
@@ -944,6 +950,7 @@
       options: {
         indexAxis: 'y',
         responsive: true,
+        ...chartAnimOpts(),
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
@@ -995,6 +1002,7 @@
       },
       options: {
         responsive: true,
+        ...chartAnimOpts(),
         maintainAspectRatio: false,
         scales: {
           x: { type: 'linear', position: 'bottom', grid: { color: colors.gridColor }, ticks: { color: colors.textColor } },
@@ -1030,6 +1038,7 @@
       },
       options: {
         responsive: true,
+        ...chartAnimOpts(),
         maintainAspectRatio: false,
         scales: {
           x: { type: 'linear', position: 'bottom', grid: { color: colors.gridColor }, ticks: { color: colors.textColor } },
@@ -1090,6 +1099,7 @@
       },
       options: {
         responsive: true,
+        ...chartAnimOpts(),
         maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
@@ -1151,6 +1161,7 @@
       },
       options: {
         responsive: true,
+        ...chartAnimOpts(),
         maintainAspectRatio: false,
         scales: {
           x: { type: 'linear', position: 'bottom', title: { display: true, text: 'Cuantiles teóricos', color: colors.textColor }, grid: { color: colors.gridColor }, ticks: { color: colors.textColor } },
@@ -1161,7 +1172,9 @@
   }
 
   function updateAllChartsTheme() {
+    quietRedraw = true;
     updateCharts(computeStats());
+    quietRedraw = false;
   }
 
   // ==========================================
@@ -1246,6 +1259,7 @@
   window.onload = function() {
     syncThemeButton();
     updateUI();
+    chartsReady = true;
     switchFormulaTab('Ej1_Descriptiva');
     runPredictor(83);
   };
