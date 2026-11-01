@@ -757,6 +757,32 @@
   // ==========================================
   // TABLA DE PACIENTES & EDITOR CSV
   // ==========================================
+  const INPUT_CLS = 'w-24 p-2 rounded-xl sub-card border-2 border-slate-300 dark:border-slate-700 font-mono font-bold';
+  let draftPatient = null; // paciente nuevo que aún no se ha guardado
+
+  function renderDraftRow() {
+    if (!draftPatient || !isEditing) return '';
+    const d = draftPatient;
+    return `
+        <tr class="bg-emerald-50 dark:bg-emerald-950/40">
+          <td class="p-4 font-bold text-emerald-700 dark:text-emerald-300">Nuevo</td>
+          <td class="p-4">
+            <select id="draft-grupo" onchange="draftPatient.grupo = Number(this.value)" aria-label="Grupo del nuevo paciente" class="p-2 rounded-xl sub-card border-2 border-slate-300 dark:border-slate-700 font-mono font-bold text-xs">
+              <option value="1" ${d.grupo === 1 ? 'selected' : ''}>Joven (&lt;30)</option>
+              <option value="2" ${d.grupo === 2 ? 'selected' : ''}>Adulto (&gt;30)</option>
+            </select>
+          </td>
+          <td class="p-4"><input id="draft-basal" type="number" value="${d.basal ?? ''}" oninput="draftPatient.basal = this.value" onkeydown="if (event.key === 'Enter') saveDraftPatient(); if (event.key === 'Escape') cancelDraftPatient();" min="1" step="any" placeholder="mg/dL" aria-label="Glucosa basal del nuevo paciente" class="${INPUT_CLS}"></td>
+          <td class="p-4"><input id="draft-g60" type="number" value="${d.g60 ?? ''}" oninput="draftPatient.g60 = this.value" onkeydown="if (event.key === 'Enter') saveDraftPatient(); if (event.key === 'Escape') cancelDraftPatient();" min="1" step="any" placeholder="mg/dL" aria-label="Glucosa a los 60 min del nuevo paciente" class="${INPUT_CLS}"></td>
+          <td class="p-4 card-text-muted" colspan="2"><span id="draft-error" class="text-xs text-rose-600 dark:text-rose-400 font-bold"></span></td>
+          <td class="p-4 whitespace-nowrap">
+            <button onclick="saveDraftPatient()" class="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">Guardar</button>
+            <span class="text-slate-400 mx-1">·</span>
+            <button onclick="cancelDraftPatient()" class="card-text-muted font-bold hover:underline">Cancelar</button>
+          </td>
+        </tr>`;
+  }
+
   function renderPatientTable() {
     const filter = document.getElementById('table-filter').value;
     const tbody = document.getElementById('patient-table-body');
@@ -764,7 +790,7 @@
     
     document.getElementById('table-total-count').textContent = fullDataset.length;
 
-    tbody.innerHTML = filtered.map(d => {
+    tbody.innerHTML = renderDraftRow() + filtered.map(d => {
       const dif = d.g60 - d.basal;
       let ada = 'Normal';
       let adaColor = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300';
@@ -776,13 +802,20 @@
         adaColor = 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
       }
 
+      const grupoCell = isEditing
+        ? `<select onchange="updatePatientGroup(${d.id}, this.value)" aria-label="Grupo del paciente ${d.id}" class="p-2 rounded-xl sub-card border-2 border-slate-300 dark:border-slate-700 font-mono font-bold text-xs">
+             <option value="1" ${d.grupo === 1 ? 'selected' : ''}>Joven (&lt;30)</option>
+             <option value="2" ${d.grupo === 2 ? 'selected' : ''}>Adulto (&gt;30)</option>
+           </select>`
+        : `<span class="px-2.5 py-1 rounded-md text-xs font-bold ${d.grupo===1 ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'}">${d.grupo===1 ? 'Joven (<30)' : 'Adulto (>30)'}</span>`;
+
       return `
         <tr class="hover:bg-slate-100 dark:hover:bg-slate-900/50 transition-colors">
           <td class="p-4 font-bold">#${d.id}</td>
-          <td class="p-4"><span class="px-2.5 py-1 rounded-md text-xs font-bold ${d.grupo===1 ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'}">${d.grupo===1 ? 'Joven (<30)' : 'Adulto (>30)'}</span></td>
-          <td class="p-4">${isEditing ? `<input type="number" value="${d.basal}" onchange="updatePatientField(${d.id}, 'basal', this.value)" class="w-24 p-2 rounded-xl sub-card border-2 border-slate-300 dark:border-slate-700 font-mono font-bold">` : d.basal + ' mg/dL'}</td>
-          <td class="p-4">${isEditing ? `<input type="number" value="${d.g60}" onchange="updatePatientField(${d.id}, 'g60', this.value)" class="w-24 p-2 rounded-xl sub-card border-2 border-slate-300 dark:border-slate-700 font-mono font-bold">` : d.g60 + ' mg/dL'}</td>
-          <td class="p-4 font-bold ${dif < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-cyan-600 dark:text-cyan-400'}">${dif > 0 ? '+' : ''}${dif} mg/dL</td>
+          <td class="p-4">${grupoCell}</td>
+          <td class="p-4">${isEditing ? `<input type="number" min="1" step="any" value="${d.basal}" onchange="updatePatientField(${d.id}, 'basal', this)" aria-label="Glucosa basal del paciente ${d.id}" class="${INPUT_CLS}">` : d.basal + ' mg/dL'}</td>
+          <td class="p-4">${isEditing ? `<input type="number" min="1" step="any" value="${d.g60}" onchange="updatePatientField(${d.id}, 'g60', this)" aria-label="Glucosa a los 60 min del paciente ${d.id}" class="${INPUT_CLS}">` : d.g60 + ' mg/dL'}</td>
+          <td class="p-4 font-bold ${dif < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-cyan-600 dark:text-cyan-400'}">${dif > 0 ? '+' : ''}${+dif.toFixed(2)} mg/dL</td>
           <td class="p-4"><span class="px-3 py-1 rounded-lg text-xs font-bold ${adaColor}">${ada}</span></td>
           <td class="p-4">${isEditing ? `<button onclick="deletePatient(${d.id})" class="text-rose-500 font-bold hover:underline">Eliminar</button>` : '<span class="text-slate-400">-</span>'}</td>
         </tr>
@@ -792,6 +825,7 @@
 
   function toggleEditingMode(checked) {
     isEditing = checked;
+    if (!isEditing) draftPatient = null;
     document.getElementById('edit-mode-tag').textContent = isEditing ? 'Modo Edición Activo' : 'Modo Lectura';
     document.getElementById('edit-mode-tag').className = `cartoon-badge text-xs px-3.5 py-1.5 rounded-lg font-mono font-bold ${isEditing ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500' : 'sub-card card-text-muted'}`;
     
@@ -804,31 +838,100 @@
     renderPatientTable();
   }
 
-  function updatePatientField(id, field, val) {
+  // ---------- Deshacer ----------
+  let undoSnapshot = null;
+  function snapshotDataset() { return fullDataset.map(d => ({ ...d })); }
+
+  function showToast(msg, withUndo = false, ms = 7000) {
+    document.getElementById('undo-toast-text').textContent = msg;
+    document.getElementById('undo-toast-btn').classList.toggle('hidden', !withUndo);
+    document.getElementById('undo-toast').classList.remove('hidden');
+    clearTimeout(showToast.t);
+    showToast.t = setTimeout(hideToast, ms);
+  }
+  function hideToast() {
+    document.getElementById('undo-toast').classList.add('hidden');
+    undoSnapshot = null;
+  }
+  function offerUndo(msg) {
+    // undoSnapshot debe haberse guardado justo antes del cambio
+    showToast(msg, true);
+  }
+  function undoLastChange() {
+    if (!undoSnapshot) return;
+    fullDataset = undoSnapshot;
+    undoSnapshot = null;
+    updateUI();
+    showToast('Cambio deshecho.', false, 3000);
+  }
+
+  // ---------- Edición de celdas ----------
+  function updatePatientField(id, field, input) {
     const p = fullDataset.find(d => d.id === id);
-    if(p) {
-      p[field] = parseFloat(val) || 0;
-      updateUI();
+    if (!p) return;
+    const v = Number(String(input.value).replace(',', '.'));
+    if (input.value.trim() === '' || !(v > 0)) {
+      input.value = p[field]; // se descarta el valor no válido
+      showToast(`Valor no válido para el paciente #${id}: debe ser un número mayor que 0. Se mantiene ${p[field]} mg/dL.`);
+      return;
     }
+    p[field] = v;
+    updateUI();
+  }
+
+  function updatePatientGroup(id, val) {
+    const p = fullDataset.find(d => d.id === id);
+    if (!p) return;
+    p.grupo = Number(val);
+    p.edad = p.grupo === 1 ? 25 : 45;
+    updateUI();
   }
 
   function deletePatient(id) {
+    undoSnapshot = snapshotDataset();
     fullDataset = fullDataset.filter(d => d.id !== id);
     updateUI();
+    offerUndo(`Paciente #${id} eliminado.`);
   }
 
+  // ---------- Alta de pacientes ----------
   function addNewPatient() {
-    const newId = fullDataset.length ? Math.max(...fullDataset.map(d=>d.id)) + 1 : 1;
-    fullDataset.push({ id: newId, grupo: 1, edad: 22, basal: 85, g60: 148 });
+    const filter = document.getElementById('table-filter').value;
+    draftPatient = { grupo: filter === '2' ? 2 : 1 };
+    renderPatientTable();
+    const first = document.getElementById('draft-basal');
+    if (first) { first.scrollIntoView({ block: 'nearest' }); first.focus(); }
+  }
+
+  function cancelDraftPatient() {
+    draftPatient = null;
+    renderPatientTable();
+  }
+
+  function saveDraftPatient() {
+    const grupo = Number(document.getElementById('draft-grupo').value);
+    const basal = Number(document.getElementById('draft-basal').value);
+    const g60 = Number(document.getElementById('draft-g60').value);
+    if (!(basal > 0) || !(g60 > 0)) {
+      document.getElementById('draft-error').textContent = 'Rellena las dos glucosas con números mayores que 0.';
+      return;
+    }
+    const newId = fullDataset.length ? Math.max(...fullDataset.map(d => d.id)) + 1 : 1;
+    fullDataset.push({ id: newId, grupo, edad: grupo === 1 ? 25 : 45, basal, g60 });
+    draftPatient = null;
     updateUI();
+    showToast(`Paciente #${newId} añadido.`, false, 4000);
   }
 
   function resetDatasetToOriginal() {
+    undoSnapshot = snapshotDataset();
     loadInitialDataset();
+    draftPatient = null;
     isEditing = false;
     document.getElementById('edit-toggle-switch').checked = false;
     toggleEditingMode(false);
     updateUI();
+    offerUndo('Muestra original restaurada.');
   }
 
   function buildCSV() {
@@ -928,8 +1031,10 @@
         showCsvFeedback(`No se ha importado "${file.name}": ${error} Los datos actuales no han cambiado.`, false, 9000);
         return;
       }
+      undoSnapshot = snapshotDataset();
       fullDataset = rows;
       updateUI();
+      offerUndo(`Datos sustituidos por "${file.name}".`);
       let msg = `Importados ${rows.length} pacientes desde "${file.name}".`;
       if (bad.length) {
         const list = bad.slice(0, 6).join(', ') + (bad.length > 6 ? '…' : '');
@@ -1349,5 +1454,11 @@
   };
 </script>
 
+  <!-- Aviso flotante con opción de deshacer -->
+  <div id="undo-toast" role="status" aria-live="polite" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] max-w-[calc(100vw-2rem)] flex items-center gap-4 px-5 py-3.5 rounded-2xl bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xl text-sm font-medium">
+    <span id="undo-toast-text"></span>
+    <button id="undo-toast-btn" onclick="undoLastChange()" class="font-mono font-bold text-xs uppercase tracking-wider text-cyan-300 dark:text-cyan-700 hover:underline whitespace-nowrap">Deshacer</button>
+    <button onclick="hideToast()" aria-label="Cerrar aviso" class="text-white/60 dark:text-slate-900/60 hover:text-white dark:hover:text-slate-900 text-base leading-none">✕</button>
+  </div>
 </body>
 </html>
