@@ -587,17 +587,18 @@
   // ==========================================
   // DATOS Y MOTOR BIOESTADÍSTICO REACTIVO
   // ==========================================
+  // Datos reales: Hoja1 de EVALMASTER2627_resuelto_REVISADO.xlsx (mismo orden de filas)
   const initialJovenes = [
-    82,75,90,78,85,83,79,92,88,76,81,84,95,77,80,89,86,75,82,90,78,83,85,91,79,84,87,80,82,75,88,90,76,83,103
+    90,82,80,75,74,97,103,76,65,89,83,77,92,90,82,78,79,100,81,93,75,89,76,85,99,79,90,86,94,91,82,81,97,75,79
   ];
   const initialAdultos = [
-    88,92,85,90,94,86,91,89,93,87,90,88,92,85,91,89,94,88,90,86,92,89,93,87,90,88,91,85,89,92
+    94,96,93,88,79,79,90,102,104,86,89,81,80,90,91,88,77,96,81,94,90,100,88,77,91,95,99,88,84,92
   ];
   const initialJovenes60 = [
-    150,141,159,145,152,149,144,155,159,138,146,150,161,141,148,155,153,138,145,159,146,150,152,160,144,149,157,148,150,131,157,160,143,149,172
+    159,151,148,138,141,157,172,150,131,156,147,141,147,150,146,151,154,161,150,149,148,165,144,149,160,145,148,150,152,155,145,150,159,149,146
   ];
   const initialAdultos60 = [
-    170,175,168,172,178,166,173,171,176,169,172,170,175,167,173,171,178,170,172,166,175,171,176,169,172,170,173,167,171,175
+    180,166,190,174,156,184,159,161,182,170,197,179,183,178,169,172,152,181,160,160,158,164,172,174,172,169,172,173,188,160
   ];
 
   let fullDataset = [];
@@ -636,6 +637,29 @@
   // ==========================================
   // CÁLCULOS BIOESTADÍSTICOS
   // ==========================================
+  // Inversa de la normal estándar (aproximación de Acklam, error < 1e-9)
+  function normInv(p) {
+    const a=[-39.69683028665376,220.9460984245205,-275.9285104469687,138.3577518672690,-30.66479806614716,2.506628277459239];
+    const b=[-54.47609879822406,161.5858368580409,-155.6989798598866,66.80131188771972,-13.28068155288572];
+    const c=[-0.007784894002430293,-0.3223964580411365,-2.400758277161838,-2.549732539343734,4.374664141464968,2.938163982698783];
+    const d=[0.007784695709041462,0.3224671290700398,2.445134137142996,3.754408661907416];
+    const pl=0.02425;
+    if (p < pl) { const q=Math.sqrt(-2*Math.log(p)); return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+    if (p > 1-pl) { const q=Math.sqrt(-2*Math.log(1-p)); return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+    const q=p-0.5, r=q*q;
+    return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+  }
+
+  function meanSd(v) {
+    const m = v.reduce((a,b)=>a+b,0) / v.length;
+    const sd = Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0) / (v.length-1));
+    return { m, sd };
+  }
+
+  function g60ByGroup(group) {
+    return fullDataset.filter(d => d.grupo === (group === 'jovenes' ? 1 : 2)).map(d => d.g60);
+  }
+
   function computeStats() {
     const jBasal = fullDataset.filter(d => d.grupo === 1).map(d => d.basal);
     const aBasal = fullDataset.filter(d => d.grupo === 2).map(d => d.basal);
@@ -879,37 +903,14 @@
   let regressionChartInstance = null;
   let currentPredictorX = 83;
   let currentQqGroup = 'jovenes';
+  let currentNormGroup = 'jovenes';
   let residualsChartInstance = null;
 
   function updateCharts(st) {
     const colors = getChartThemeColors();
 
-    // 1. Normality Histogram
-    const ctxNorm = document.getElementById('normalityChart').getContext('2d');
-    if(normalityChartInstance) normalityChartInstance.destroy();
-    normalityChartInstance = new Chart(ctxNorm, {
-      type: 'bar',
-      data: {
-        labels: ['130-135', '135-140', '140-145', '145-150', '150-155', '155-160', '160-165', '165-170', '170-175'],
-        datasets: [{
-          label: 'Frecuencia Observada',
-          data: [1, 2, 5, 8, 10, 6, 2, 1, 0],
-          backgroundColor: 'rgba(6, 182, 212, 0.7)',
-          borderColor: '#06b6d4',
-          borderWidth: 2,
-          borderRadius: 8
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { color: colors.gridColor }, ticks: { color: colors.textColor } },
-          y: { grid: { color: colors.gridColor }, ticks: { color: colors.textColor } }
-        }
-      }
-    });
+    // 1. Histograma de densidad con curva normal (Figura 2)
+    updateNormChart(currentNormGroup);
 
     // 2. Boxplot Simulation Chart (Figura 1)
     const ctxBox = document.getElementById('boxplotChart').getContext('2d');
@@ -1025,6 +1026,75 @@
     });
   }
 
+  function updateNormChart(group) {
+    currentNormGroup = group;
+    const colors = getChartThemeColors();
+    const isJoven = group === 'jovenes';
+    document.getElementById('btn-norm-j').className = isJoven ? 'px-4 py-2 text-xs rounded-lg font-bold bg-cyan-600 text-white shadow' : 'px-4 py-2 text-xs rounded-lg font-bold card-text-muted hover:text-cyan-600 dark:hover:text-white';
+    document.getElementById('btn-norm-a').className = !isJoven ? 'px-4 py-2 text-xs rounded-lg font-bold bg-cyan-600 text-white shadow' : 'px-4 py-2 text-xs rounded-lg font-bold card-text-muted hover:text-cyan-600 dark:hover:text-white';
+
+    const v = g60ByGroup(group);
+    const ctxNorm = document.getElementById('normalityChart').getContext('2d');
+    if (normalityChartInstance) normalityChartInstance.destroy();
+    if (v.length < 2) { normalityChartInstance = null; return; }
+
+    // Intervalos iguales entre mínimo y máximo con la regla de Sturges, como en la Figura 2 del PDF
+    const min = Math.min(...v), max = Math.max(...v);
+    const k = Math.ceil(Math.log2(v.length) + 1), w = (max - min) / k || 1;
+    const counts = new Array(k).fill(0);
+    v.forEach(x => counts[Math.min(k - 1, Math.floor((x - min) / w))]++);
+    const bars = counts.map((c, i) => ({ x: min + w * (i + 0.5), y: c / (v.length * w) }));
+
+    const { m, sd } = meanSd(v);
+    const from = m - 4 * sd, to = m + 4 * sd, curve = [];
+    for (let i = 0; i <= 80; i++) {
+      const x = from + (to - from) * i / 80;
+      curve.push({ x, y: Math.exp(-0.5 * ((x - m) / sd) ** 2) / (sd * Math.sqrt(2 * Math.PI)) });
+    }
+
+    normalityChartInstance = new Chart(ctxNorm, {
+      data: {
+        datasets: [{
+          type: 'bar',
+          label: 'Densidad observada',
+          data: bars,
+          backgroundColor: 'rgba(6, 182, 212, 0.55)',
+          borderColor: '#0891b2',
+          borderWidth: 1.5,
+          barPercentage: 1,
+          categoryPercentage: 1,
+          order: 2
+        }, {
+          type: 'line',
+          label: 'Curva normal',
+          data: curve,
+          borderColor: '#dc2626',
+          borderWidth: 2.5,
+          pointRadius: 0,
+          tension: 0.3,
+          order: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { title: (items) => {
+            const it = items[0];
+            if (it.datasetIndex !== 0) return `${it.parsed.x.toFixed(1)} mg/dL`;
+            const lo = min + w * it.dataIndex;
+            return `${lo.toFixed(1)} – ${(lo + w).toFixed(1)} mg/dL · ${counts[it.dataIndex]} pacientes`;
+          } } }
+        },
+        scales: {
+          x: { type: 'linear', min: Math.floor(from / 10) * 10, max: Math.ceil(to / 10) * 10, title: { display: true, text: 'Glucosa a los 60 min (mg/dL)', color: colors.textColor }, grid: { color: colors.gridColor }, ticks: { color: colors.textColor } },
+          y: { beginAtZero: true, title: { display: true, text: 'Densidad', color: colors.textColor }, grid: { color: colors.gridColor }, ticks: { color: colors.textColor } }
+        }
+      }
+    });
+  }
+
   function updateQqChart(group) {
     currentQqGroup = group;
     const colors = getChartThemeColors();
@@ -1032,15 +1102,18 @@
     document.getElementById('btn-qq-j').className = isJoven ? 'px-4 py-2 text-xs rounded-lg font-bold bg-cyan-600 text-white shadow' : 'px-4 py-2 text-xs rounded-lg font-bold card-text-muted hover:text-cyan-600 dark:hover:text-white';
     document.getElementById('btn-qq-a').className = !isJoven ? 'px-4 py-2 text-xs rounded-lg font-bold bg-cyan-600 text-white shadow' : 'px-4 py-2 text-xs rounded-lg font-bold card-text-muted hover:text-cyan-600 dark:hover:text-white';
 
-    const qqData = isJoven ? [
-      {x: -2.0, y: 131}, {x: -1.5, y: 138}, {x: -1.0, y: 144}, {x: -0.5, y: 148},
-      {x: 0.0, y: 150}, {x: 0.5, y: 152}, {x: 1.0, y: 157}, {x: 1.5, y: 160}, {x: 2.0, y: 172}
-    ] : [
-      {x: -2.0, y: 166}, {x: -1.5, y: 168}, {x: -1.0, y: 170}, {x: -0.5, y: 171},
-      {x: 0.0, y: 172}, {x: 0.5, y: 173}, {x: 1.0, y: 175}, {x: 1.5, y: 176}, {x: 2.0, y: 178}
-    ];
-
-    const diagLine = [{x: -2, y: isJoven ? 130 : 165}, {x: 2, y: isJoven ? 175 : 180}];
+    // Cuantiles teóricos con la posición de Blom: (i − 0,375) / (n + 0,25)
+    const v = g60ByGroup(group).slice().sort((a, b) => a - b);
+    const n = v.length;
+    const qqData = v.map((y, i) => ({ x: normInv((i + 1 - 0.375) / (n + 0.25)), y }));
+    // Recta de referencia ajustada por mínimos cuadrados
+    let diagLine = [];
+    if (n >= 2) {
+      const mx = qqData.reduce((a, p) => a + p.x, 0) / n, my = qqData.reduce((a, p) => a + p.y, 0) / n;
+      const b1 = qqData.reduce((a, p) => a + (p.x - mx) * (p.y - my), 0) / qqData.reduce((a, p) => a + (p.x - mx) ** 2, 0);
+      const x0 = qqData[0].x, x1 = qqData[n - 1].x;
+      diagLine = [{ x: x0, y: my + b1 * (x0 - mx) }, { x: x1, y: my + b1 * (x1 - mx) }];
+    }
 
     const ctxQq = document.getElementById('qqChart').getContext('2d');
     if(qqChartInstance) qqChartInstance.destroy();
@@ -1050,10 +1123,12 @@
         datasets: [{
           label: 'Cuantiles Observados',
           data: qqData,
-          backgroundColor: '#8b5cf6',
-          pointRadius: 6
+          backgroundColor: 'rgba(139, 92, 246, 0.25)',
+          borderColor: '#7c3aed',
+          borderWidth: 1.5,
+          pointRadius: 5
         }, {
-          label: 'Diagonal Teórica',
+          label: 'Recta de referencia',
           data: diagLine,
           type: 'line',
           borderColor: '#ef4444',
@@ -1065,8 +1140,8 @@
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: { type: 'linear', position: 'bottom', grid: { color: colors.gridColor }, ticks: { color: colors.textColor } },
-          y: { grid: { color: colors.gridColor }, ticks: { color: colors.textColor } }
+          x: { type: 'linear', position: 'bottom', title: { display: true, text: 'Cuantiles teóricos', color: colors.textColor }, grid: { color: colors.gridColor }, ticks: { color: colors.textColor } },
+          y: { title: { display: true, text: 'Cuantiles observados (mg/dL)', color: colors.textColor }, grid: { color: colors.gridColor }, ticks: { color: colors.textColor } }
         }
       }
     });
