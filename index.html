@@ -536,8 +536,12 @@
               <span class="text-xs font-mono font-bold card-text-main">Modo Edición</span>
             </div>
 
-            <button onclick="exportModifiedCSV()" id="btn-export-csv" disabled class="btn-tactile px-4 py-3 text-xs font-mono font-bold rounded-xl sub-card text-slate-400 border-2 border-slate-300 dark:border-slate-700 opacity-60 cursor-not-allowed transition-all flex items-center gap-2.5">
-              <span class="text-base">💾</span> Copiar CSV Modificado
+            <button onclick="downloadCSV()" id="btn-download-csv" class="btn-tactile px-4 py-3 text-xs font-mono font-bold rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white border-b-cyan-800 transition-all flex items-center gap-2.5 shadow">
+              <span class="text-base" aria-hidden="true">⬇️</span> Descargar CSV
+            </button>
+
+            <button onclick="exportModifiedCSV()" id="btn-export-csv" class="btn-tactile px-4 py-3 text-xs font-mono font-bold rounded-xl sub-card card-text-main border-2 border-slate-300 dark:border-slate-700 transition-all flex items-center gap-2.5">
+              <span class="text-base" aria-hidden="true">📋</span> Copiar CSV
             </button>
 
             <button onclick="addNewPatient()" id="btn-add-patient" disabled class="btn-tactile px-4 py-3 text-xs font-mono font-bold rounded-xl sub-card text-slate-400 border-2 border-slate-300 dark:border-slate-700 opacity-60 cursor-not-allowed transition-all flex items-center gap-2">
@@ -553,8 +557,8 @@
         </div>
 
         <!-- Copy Feedback Banner -->
-        <div id="csv-copy-feedback" class="hidden p-4 bg-emerald-100 dark:bg-emerald-950 border-2 border-emerald-500/50 rounded-xl text-emerald-800 dark:text-emerald-300 text-xs font-mono font-bold flex items-center justify-between">
-          <span class="flex items-center gap-2"><span class="text-base">✓</span> Dataset exportado correctamente al portapapeles en formato CSV con todas tus modificaciones.</span>
+        <div id="csv-copy-feedback" role="status" class="hidden p-4 bg-emerald-100 dark:bg-emerald-950 border-2 border-emerald-500/50 rounded-xl text-emerald-800 dark:text-emerald-300 text-xs font-mono font-bold flex items-center justify-between">
+          <span class="flex items-center gap-2"><span class="text-base">✓</span> <span id="csv-feedback-text">Datos copiados al portapapeles en formato CSV.</span></span>
           <button onclick="this.parentElement.classList.add('hidden')" class="text-emerald-600 dark:text-emerald-400 font-bold text-base">✕</button>
         </div>
 
@@ -791,13 +795,10 @@
     document.getElementById('edit-mode-tag').textContent = isEditing ? 'Modo Edición Activo' : 'Modo Lectura';
     document.getElementById('edit-mode-tag').className = `cartoon-badge text-xs px-3.5 py-1.5 rounded-lg font-mono font-bold ${isEditing ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500' : 'sub-card card-text-muted'}`;
     
-    const exportBtn = document.getElementById('btn-export-csv');
     const addBtn = document.getElementById('btn-add-patient');
     if(isEditing) {
-      exportBtn.disabled = false; exportBtn.classList.remove('opacity-65', 'cursor-not-allowed', 'text-slate-400'); exportBtn.classList.add('bg-cyan-600', 'text-white', 'hover:bg-cyan-500');
       addBtn.disabled = false; addBtn.classList.remove('opacity-65', 'cursor-not-allowed', 'text-slate-400'); addBtn.classList.add('bg-emerald-600', 'text-white', 'hover:bg-emerald-500');
     } else {
-      exportBtn.disabled = true; exportBtn.classList.add('opacity-65', 'cursor-not-allowed', 'text-slate-400'); exportBtn.classList.remove('bg-cyan-600', 'text-white', 'hover:bg-cyan-500');
       addBtn.disabled = true; addBtn.classList.add('opacity-65', 'cursor-not-allowed', 'text-slate-400'); addBtn.classList.remove('bg-emerald-600', 'text-white', 'hover:bg-emerald-500');
     }
     renderPatientTable();
@@ -830,11 +831,38 @@
     updateUI();
   }
 
+  function buildCSV() {
+    return 'id,grupo,edad,basal,g60\n' + fullDataset.map(d=>`${d.id},${d.grupo},${d.edad},${d.basal},${d.g60}`).join('\n');
+  }
+
+  function showCsvFeedback(msg, ok = true) {
+    const box = document.getElementById('csv-copy-feedback');
+    document.getElementById('csv-feedback-text').textContent = msg;
+    box.classList.toggle('bg-emerald-100', ok); box.classList.toggle('dark:bg-emerald-950', ok);
+    box.classList.toggle('bg-rose-100', !ok); box.classList.toggle('dark:bg-rose-950', !ok);
+    box.classList.remove('hidden');
+    clearTimeout(showCsvFeedback.t);
+    showCsvFeedback.t = setTimeout(() => box.classList.add('hidden'), 5000);
+  }
+
   function exportModifiedCSV() {
-    let csv = 'id,grupo,edad,basal,g60\n' + fullDataset.map(d=>`${d.id},${d.grupo},${d.edad},${d.basal},${d.g60}`).join('\n');
-    navigator.clipboard.writeText(csv).then(() => {
-      document.getElementById('csv-copy-feedback').classList.remove('hidden');
-    });
+    const csv = buildCSV();
+    if (!navigator.clipboard) { showCsvFeedback('Tu navegador no permite copiar al portapapeles. Usa "Descargar CSV".', false); return; }
+    navigator.clipboard.writeText(csv)
+      .then(() => showCsvFeedback(`Copiados ${fullDataset.length} pacientes al portapapeles en formato CSV.`))
+      .catch(() => showCsvFeedback('No se ha podido copiar al portapapeles. Usa "Descargar CSV".', false));
+  }
+
+  function downloadCSV() {
+    // BOM para que Excel abra bien los acentos
+    const blob = new Blob(['\ufeff' + buildCSV()], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `glucostat_datos_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showCsvFeedback(`Descargado el CSV con ${fullDataset.length} pacientes.`);
   }
 
   function importCustomCSV(event) {
