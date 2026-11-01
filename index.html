@@ -21,7 +21,7 @@
     }
   }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
   :root {
     --bg-main: #f1f5f9;
@@ -308,7 +308,7 @@
           </div>
 
           <!-- Live Output Badge & Restore Button -->
-        <div class="sub-card p-8 rounded-2xl border-2 border-amber-500/60 text-center min-w-[340px] shadow-xl space-y-3.5">
+        <div class="sub-card p-8 rounded-2xl border-2 border-amber-500/60 text-center w-full lg:w-auto lg:min-w-[340px] shadow-xl space-y-3.5">
           <span class="text-xs font-mono font-bold card-text-muted block uppercase tracking-wider">Estimación Glucosa 60 Min (Ŷ)</span>
           <div id="sim-result-y" class="text-4xl sm:text-5xl font-black text-amber-600 dark:text-amber-300 font-mono">149.23 mg/dL</div>
           <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono block pt-1">Para Nivel Basal X = <span id="sim-result-x">83.0</span> mg/dL</span>
@@ -370,12 +370,6 @@
           </div>
         </div>
 
-        <!-- Confidence Selector -->
-        <div class="flex items-center gap-3 sub-card p-2.5 rounded-2xl">
-          <span class="text-xs font-mono font-bold card-text-muted px-2">Nivel Confianza:</span>
-          <button onclick="setConfidence(95)" id="btn-ic-95" class="btn-tactile px-4 py-2 text-xs font-mono font-bold rounded-xl bg-purple-600 text-white shadow">95% (α = 0.05)</button>
-          <button onclick="setConfidence(99)" id="btn-ic-99" class="btn-tactile px-4 py-2 text-xs font-mono font-bold rounded-xl card-text-muted hover:text-purple-600 dark:hover:text-white">99% (α = 0.01)</button>
-        </div>
       </div>
 
       <!-- Hypothesis Cards Grid -->
@@ -387,6 +381,11 @@
             <span id="badge-3a" class="cartoon-badge text-xs font-mono font-bold px-3.5 py-1.5 rounded-lg bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border-rose-500">Rechazar H0 al 5%</span>
           </div>
           <h4 class="text-lg font-bold card-text-main">¿Se admite una glucosa basal media de 88 mg/dL?</h4>
+          <div class="flex flex-wrap items-center gap-2 sub-card p-2 rounded-xl w-fit">
+            <span class="text-xs font-mono font-bold card-text-muted px-2">Nivel de confianza:</span>
+            <button onclick="setConfidence(95)" id="btn-ic-95" class="btn-tactile px-4 py-2 text-xs font-mono font-bold rounded-xl bg-purple-600 text-white shadow">95% (α = 0.05)</button>
+            <button onclick="setConfidence(99)" id="btn-ic-99" class="btn-tactile px-4 py-2 text-xs font-mono font-bold rounded-xl card-text-muted hover:text-purple-600 dark:hover:text-white">99% (α = 0.01)</button>
+          </div>
           <div class="p-5 sub-card rounded-xl font-mono text-sm space-y-3">
             <div class="flex justify-between"><span class="card-text-muted">IC Calculado:</span><strong id="ic-val-3a" class="text-purple-600 dark:text-purple-300">[81.65 ; 87.72] mg/dL</strong></div>
             <div class="flex justify-between"><span class="card-text-muted">Estadístico t:</span><strong id="stat-t-3a" class="card-text-main">t = -2.217</strong></div>
@@ -740,7 +739,7 @@
           <td class="p-4"><span class="px-2.5 py-1 rounded-md text-xs font-bold ${d.grupo===1 ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'}">${d.grupo===1 ? 'Joven (<30)' : 'Adulto (>30)'}</span></td>
           <td class="p-4">${isEditing ? `<input type="number" value="${d.basal}" onchange="updatePatientField(${d.id}, 'basal', this.value)" class="w-24 p-2 rounded-xl sub-card border-2 border-slate-300 dark:border-slate-700 font-mono font-bold">` : d.basal + ' mg/dL'}</td>
           <td class="p-4">${isEditing ? `<input type="number" value="${d.g60}" onchange="updatePatientField(${d.id}, 'g60', this.value)" class="w-24 p-2 rounded-xl sub-card border-2 border-slate-300 dark:border-slate-700 font-mono font-bold">` : d.g60 + ' mg/dL'}</td>
-          <td class="p-4 font-bold text-cyan-600 dark:text-cyan-400">+${dif} mg/dL</td>
+          <td class="p-4 font-bold ${dif < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-cyan-600 dark:text-cyan-400'}">${dif > 0 ? '+' : ''}${dif} mg/dL</td>
           <td class="p-4"><span class="px-3 py-1 rounded-lg text-xs font-bold ${adaColor}">${ada}</span></td>
           <td class="p-4">${isEditing ? `<button onclick="deletePatient(${d.id})" class="text-rose-500 font-bold hover:underline">Eliminar</button>` : '<span class="text-slate-400">-</span>'}</td>
         </tr>
@@ -879,6 +878,7 @@
   let qqChartInstance = null;
   let regressionChartInstance = null;
   let currentPredictorX = 83;
+  let currentQqGroup = 'jovenes';
   let residualsChartInstance = null;
 
   function updateCharts(st) {
@@ -940,7 +940,7 @@
     });
 
     // 3. Q-Q Normal Chart (Figura 3)
-    updateQqChart('jovenes');
+    updateQqChart(currentQqGroup);
 
     // 4. Regression Chart (Figura 4)
     const jBasal = fullDataset.filter(d => d.grupo === 1).map(d => d.basal);
@@ -1026,6 +1026,7 @@
   }
 
   function updateQqChart(group) {
+    currentQqGroup = group;
     const colors = getChartThemeColors();
     const isJoven = group === 'jovenes';
     document.getElementById('btn-qq-j').className = isJoven ? 'px-4 py-2 text-xs rounded-lg font-bold bg-cyan-600 text-white shadow' : 'px-4 py-2 text-xs rounded-lg font-bold card-text-muted hover:text-cyan-600 dark:hover:text-white';
