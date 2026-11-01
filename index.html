@@ -548,6 +548,9 @@
               <span class="text-base">➕</span> Añadir Paciente
             </button>
 
+            <input id="table-search" type="search" inputmode="numeric" placeholder="Buscar ID…" aria-label="Buscar paciente por ID" oninput="renderPatientTable()"
+                   class="w-36 sub-card text-xs card-text-main border-2 border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 font-mono font-bold">
+
             <select id="table-filter" onchange="renderPatientTable()" class="sub-card text-xs card-text-main border-2 border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 font-mono font-bold">
               <option value="all">Todos los grupos</option>
               <option value="1">Grupo 1: Jóvenes (&lt;30)</option>
@@ -562,16 +565,17 @@
           <button onclick="this.parentElement.classList.add('hidden')" class="text-emerald-600 dark:text-emerald-400 font-bold text-base">✕</button>
         </div>
 
+        <p id="table-showing" class="text-xs font-mono card-text-muted -mb-4" aria-live="polite"></p>
         <div class="overflow-x-auto max-h-[560px] border-2 border-slate-300 dark:border-slate-800 rounded-2xl pt-1">
           <table class="w-full text-sm text-left card-text-main">
             <thead class="sub-card text-cyan-600 dark:text-cyan-300 font-mono uppercase text-xs sticky top-0 z-10">
               <tr>
-                <th class="p-4">ID</th>
-                <th class="p-4">Grupo Cohorte</th>
-                <th class="p-4">Glucosa Basal (X)</th>
-                <th class="p-4">Glucosa 60 Min (Y)</th>
-                <th class="p-4">Variación Δ</th>
-                <th class="p-4">Diagnóstico ADA</th>
+                <th class="p-0" data-sort-col="id" aria-sort="none"><button onclick="sortPatients('id')" class="w-full text-left p-4 uppercase flex items-center gap-1.5 hover:text-cyan-800 dark:hover:text-white">ID <span class="sort-ind opacity-40" aria-hidden="true">↕</span></button></th>
+                <th class="p-0" data-sort-col="grupo" aria-sort="none"><button onclick="sortPatients('grupo')" class="w-full text-left p-4 uppercase flex items-center gap-1.5 hover:text-cyan-800 dark:hover:text-white">Grupo Cohorte <span class="sort-ind opacity-40" aria-hidden="true">↕</span></button></th>
+                <th class="p-0" data-sort-col="basal" aria-sort="none"><button onclick="sortPatients('basal')" class="w-full text-left p-4 uppercase flex items-center gap-1.5 hover:text-cyan-800 dark:hover:text-white">Glucosa Basal (X) <span class="sort-ind opacity-40" aria-hidden="true">↕</span></button></th>
+                <th class="p-0" data-sort-col="g60" aria-sort="none"><button onclick="sortPatients('g60')" class="w-full text-left p-4 uppercase flex items-center gap-1.5 hover:text-cyan-800 dark:hover:text-white">Glucosa 60 Min (Y) <span class="sort-ind opacity-40" aria-hidden="true">↕</span></button></th>
+                <th class="p-0" data-sort-col="dif" aria-sort="none"><button onclick="sortPatients('dif')" class="w-full text-left p-4 uppercase flex items-center gap-1.5 hover:text-cyan-800 dark:hover:text-white">Variación Δ <span class="sort-ind opacity-40" aria-hidden="true">↕</span></button></th>
+                <th class="p-0" data-sort-col="ada" aria-sort="none"><button onclick="sortPatients('ada')" class="w-full text-left p-4 uppercase flex items-center gap-1.5 hover:text-cyan-800 dark:hover:text-white">Diagnóstico ADA <span class="sort-ind opacity-40" aria-hidden="true">↕</span></button></th>
                 <th class="p-4">Acciones</th>
               </tr>
             </thead>
@@ -783,14 +787,48 @@
         </tr>`;
   }
 
+  let sortState = { col: 'id', dir: 1 };
+
+  function adaLevel(d) {
+    if (d.basal >= 126 || d.g60 >= 200) return 2;
+    if (d.basal >= 100 || d.g60 >= 140) return 1;
+    return 0;
+  }
+
+  function sortPatients(col) {
+    sortState = sortState.col === col ? { col, dir: -sortState.dir } : { col, dir: 1 };
+    renderPatientTable();
+  }
+
+  function updateSortHeaders() {
+    document.querySelectorAll('[data-sort-col]').forEach(th => {
+      const active = th.dataset.sortCol === sortState.col;
+      th.setAttribute('aria-sort', active ? (sortState.dir === 1 ? 'ascending' : 'descending') : 'none');
+      const ind = th.querySelector('.sort-ind');
+      ind.textContent = active ? (sortState.dir === 1 ? '↑' : '↓') : '↕';
+      ind.classList.toggle('opacity-40', !active);
+    });
+  }
+
   function renderPatientTable() {
     const filter = document.getElementById('table-filter').value;
     const tbody = document.getElementById('patient-table-body');
-    const filtered = fullDataset.filter(d => filter === 'all' || d.grupo == filter);
+    const q = (document.getElementById('table-search').value || '').replace(/[^0-9]/g, '');
+    const key = { id: d => d.id, grupo: d => d.grupo, basal: d => d.basal, g60: d => d.g60, dif: d => d.g60 - d.basal, ada: adaLevel }[sortState.col];
+    const filtered = fullDataset
+      .filter(d => filter === 'all' || d.grupo == filter)
+      .filter(d => !q || String(d.id).includes(q))
+      .sort((a, b) => (key(a) - key(b)) * sortState.dir || a.id - b.id);
+
+    updateSortHeaders();
+    document.getElementById('table-showing').textContent = filtered.length === fullDataset.length
+      ? `Mostrando los ${fullDataset.length} pacientes`
+      : `Mostrando ${filtered.length} de ${fullDataset.length} pacientes`;
     
     document.getElementById('table-total-count').textContent = fullDataset.length;
 
-    tbody.innerHTML = renderDraftRow() + filtered.map(d => {
+    const emptyRow = !filtered.length ? `<tr><td colspan="7" class="p-8 text-center card-text-muted">Ningún paciente coincide con la búsqueda.</td></tr>` : '';
+    tbody.innerHTML = renderDraftRow() + emptyRow + filtered.map(d => {
       const dif = d.g60 - d.basal;
       let ada = 'Normal';
       let adaColor = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300';
