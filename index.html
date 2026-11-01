@@ -21,6 +21,9 @@
     }
   }
 </script>
+<script>
+  try { if (localStorage.getItem('glucostat-theme') === 'dark') document.documentElement.classList.add('dark'); } catch (e) {}
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
   :root {
@@ -107,8 +110,8 @@
 
       <!-- Global Controls -->
       <div class="flex items-center gap-3">
-        <button onclick="toggleTheme()" class="btn-tactile px-4 py-2.5 text-xs font-mono font-bold rounded-xl sub-card card-text-main border-2 border-slate-300 dark:border-slate-700 flex items-center gap-2.5 shadow">
-          <span id="theme-icon" class="text-base">☀️</span> <span id="theme-text">Modo Claro</span>
+        <button id="theme-toggle" onclick="toggleTheme()" title="Cambiar a modo oscuro" aria-label="Cambiar a modo oscuro" class="btn-tactile px-4 py-2.5 text-xs font-mono font-bold rounded-xl sub-card card-text-main border-2 border-slate-300 dark:border-slate-700 flex items-center gap-2.5 shadow">
+          <span id="theme-icon" class="text-base" aria-hidden="true">🌙</span> <span id="theme-text">Modo oscuro</span>
         </button>
         <button onclick="resetDatasetToOriginal()" class="btn-tactile px-4 py-2.5 text-xs font-mono font-bold rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white border-b-cyan-800 flex items-center gap-2.5 shadow">
           <span class="text-base">🔄</span> Restaurar Muestra
@@ -617,11 +620,21 @@
   }
   loadInitialDataset();
 
+  // El botón indica el modo al que se va a cambiar
+  function syncThemeButton() {
+    const isDark = document.documentElement.classList.contains('dark');
+    const label = isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
+    document.getElementById('theme-icon').textContent = isDark ? '☀️' : '🌙';
+    document.getElementById('theme-text').textContent = isDark ? 'Modo claro' : 'Modo oscuro';
+    const btn = document.getElementById('theme-toggle');
+    btn.title = label;
+    btn.setAttribute('aria-label', label);
+  }
+
   function toggleTheme() {
-    const html = document.documentElement;
-    const isDark = html.classList.toggle('dark');
-    document.getElementById('theme-icon').textContent = isDark ? '🌙' : '☀️';
-    document.getElementById('theme-text').textContent = isDark ? 'Modo Oscuro' : 'Modo Claro';
+    const isDark = document.documentElement.classList.toggle('dark');
+    try { localStorage.setItem('glucostat-theme', isDark ? 'dark' : 'light'); } catch (e) {}
+    syncThemeButton();
     updateAllChartsTheme();
   }
 
@@ -1231,6 +1244,7 @@
 
   // Inicialización general al cargar
   window.onload = function() {
+    syncThemeButton();
     updateUI();
     switchFormulaTab('Ej1_Descriptiva');
     runPredictor(83);
