@@ -82,39 +82,39 @@
   <!-- ========================================== -->
   <!-- HEADER FIJO STICKY -->
   <!-- ========================================== -->
-  <header class="sticky top-0 z-50 backdrop-blur-md bg-opacity-90 dark:bg-opacity-90 bg-slate-100/90 dark:bg-slate-950/90 border-b-2 border-slate-200 dark:border-slate-800 px-4 sm:px-8 py-4">
-    <div class="max-w-[1600px] mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
+  <header class="sticky top-0 z-50 backdrop-blur-md bg-opacity-90 dark:bg-opacity-90 bg-slate-100/90 dark:bg-slate-950/90 border-b-2 border-slate-200 dark:border-slate-800 px-4 sm:px-8 py-2.5 lg:py-4">
+    <div class="max-w-[1600px] mx-auto flex flex-wrap lg:flex-nowrap items-center justify-between gap-x-4 gap-y-2 lg:gap-4">
       
       <!-- Brand Title -->
-      <div class="flex items-center gap-3.5">
-        <div class="w-12 h-12 rounded-2xl bg-cyan-500 flex items-center justify-center text-slate-950 shadow-lg text-2xl">
+      <div class="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+        <div class="w-9 h-9 sm:w-12 sm:h-12 shrink-0 rounded-xl sm:rounded-2xl bg-cyan-500 flex items-center justify-center text-slate-950 shadow-lg text-lg sm:text-2xl">
           🔬
         </div>
         <div>
           <div class="flex items-center gap-2 flex-wrap">
-            <h1 class="text-xl sm:text-2xl font-black tracking-tight card-text-main">GlucoStat Analytics</h1>
-            <span class="cartoon-badge text-[11px] px-2.5 py-0.5 rounded-md font-extrabold bg-cyan-500/20 text-cyan-600 dark:text-cyan-300">v4.0 UCM</span>
+            <h1 class="text-lg sm:text-2xl font-black tracking-tight card-text-main">GlucoStat Analytics</h1>
+            <span class="hidden sm:inline-block cartoon-badge text-[11px] px-2.5 py-0.5 rounded-md font-extrabold bg-cyan-500/20 text-cyan-600 dark:text-cyan-300">v4.0 UCM</span>
           </div>
-          <p class="text-xs card-text-muted font-mono">Estudio de Tolerancia Oral a la Glucosa (N=65)</p>
+          <p class="hidden sm:block text-xs card-text-muted font-mono">Estudio de Tolerancia Oral a la Glucosa (N=65)</p>
         </div>
       </div>
 
       <!-- Navigation Links -->
-      <nav class="flex items-center gap-2 overflow-x-auto max-w-full pb-2 lg:pb-0 font-mono text-xs font-bold">
-        <a href="#ejercicio1" class="px-3.5 py-2 rounded-xl sub-card card-text-main hover:bg-cyan-500 hover:text-slate-950 transition-colors whitespace-nowrap">1. Descriptiva</a>
-        <a href="#ejercicio2" class="px-3.5 py-2 rounded-xl sub-card card-text-main hover:bg-amber-500 hover:text-slate-950 transition-colors whitespace-nowrap">2. Regresión</a>
-        <a href="#ejercicio3" class="px-3.5 py-2 rounded-xl sub-card card-text-main hover:bg-purple-500 hover:text-slate-950 transition-colors whitespace-nowrap">3. Contrastes</a>
-        <a href="#excel-inspector" class="px-3.5 py-2 rounded-xl sub-card card-text-main hover:bg-emerald-500 hover:text-slate-950 transition-colors whitespace-nowrap">4. Fórmulas Excel</a>
-        <a href="#dataset-editor" class="px-3.5 py-2 rounded-xl sub-card card-text-main hover:bg-rose-500 hover:text-slate-950 transition-colors whitespace-nowrap">5. Datos & CSV</a>
+      <nav id="main-nav" aria-label="Secciones" class="order-last lg:order-none w-full lg:w-auto flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 font-mono text-xs font-bold [scrollbar-width:none]">
+        <a href="#ejercicio1" data-active="bg-cyan-500 text-slate-950" class="nav-link px-3 lg:px-3.5 py-2 rounded-xl sub-card card-text-main hover:bg-cyan-500 hover:text-slate-950 transition-colors whitespace-nowrap">1. Descriptiva</a>
+        <a href="#ejercicio2" data-active="bg-amber-500 text-slate-950" class="nav-link px-3 lg:px-3.5 py-2 rounded-xl sub-card card-text-main hover:bg-amber-500 hover:text-slate-950 transition-colors whitespace-nowrap">2. Regresión</a>
+        <a href="#ejercicio3" data-active="bg-purple-500 text-slate-950" class="nav-link px-3 lg:px-3.5 py-2 rounded-xl sub-card card-text-main hover:bg-purple-500 hover:text-slate-950 transition-colors whitespace-nowrap">3. Contrastes</a>
+        <a href="#excel-inspector" data-active="bg-emerald-500 text-slate-950" class="nav-link px-3 lg:px-3.5 py-2 rounded-xl sub-card card-text-main hover:bg-emerald-500 hover:text-slate-950 transition-colors whitespace-nowrap">4. Fórmulas Excel</a>
+        <a href="#dataset-editor" data-active="bg-rose-500 text-slate-950" class="nav-link px-3 lg:px-3.5 py-2 rounded-xl sub-card card-text-main hover:bg-rose-500 hover:text-slate-950 transition-colors whitespace-nowrap">5. Datos & CSV</a>
       </nav>
 
       <!-- Global Controls -->
-      <div class="flex items-center gap-3">
-        <button id="theme-toggle" onclick="toggleTheme()" title="Cambiar a modo oscuro" aria-label="Cambiar a modo oscuro" class="btn-tactile px-4 py-2.5 text-xs font-mono font-bold rounded-xl sub-card card-text-main border-2 border-slate-300 dark:border-slate-700 flex items-center gap-2.5 shadow">
-          <span id="theme-icon" class="text-base" aria-hidden="true">🌙</span> <span id="theme-text">Modo oscuro</span>
+      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+        <button id="theme-toggle" onclick="toggleTheme()" title="Cambiar a modo oscuro" aria-label="Cambiar a modo oscuro" class="btn-tactile px-3 sm:px-4 py-2.5 text-xs font-mono font-bold rounded-xl sub-card card-text-main border-2 border-slate-300 dark:border-slate-700 flex items-center gap-2.5 shadow">
+          <span id="theme-icon" class="text-base" aria-hidden="true">🌙</span> <span id="theme-text" class="hidden sm:inline">Modo oscuro</span>
         </button>
-        <button onclick="resetDatasetToOriginal()" class="btn-tactile px-4 py-2.5 text-xs font-mono font-bold rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white border-b-cyan-800 flex items-center gap-2.5 shadow">
-          <span class="text-base">🔄</span> Restaurar Muestra
+        <button onclick="resetDatasetToOriginal()" title="Restaurar la muestra original" aria-label="Restaurar la muestra original" class="btn-tactile px-3 sm:px-4 py-2.5 text-xs font-mono font-bold rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white border-b-cyan-800 flex items-center gap-2.5 shadow">
+          <span class="text-base" aria-hidden="true">🔄</span> <span class="hidden sm:inline">Restaurar Muestra</span>
         </button>
       </div>
 
@@ -1016,7 +1016,7 @@
   // o, si no hay cabecera reconocible, por posición (5 columnas: id,grupo,edad,basal,g60;
   // 3 columnas: grupo,basal,g60).
   function parsePatientsCSV(text) {
-    const lines = text.replace(/^﻿/, '').split(/\r?\n/);
+    const lines = text.replace(/^\ufeff/, '').split(/\r?\n/);
     const first = lines.find(l => l.trim() !== '') || '';
     const counts = { ';': first.split(';').length, '\t': first.split('\t').length, ',': first.split(',').length };
     const sep = Object.keys(counts).reduce((x, y) => counts[y] > counts[x] ? y : x, ',');
@@ -1483,7 +1483,50 @@
   }
 
   // Inicialización general al cargar
+  // Resalta en el menú la sección visible
+  function setupActiveNav() {
+    const links = [...document.querySelectorAll('#main-nav .nav-link')];
+    const byId = Object.fromEntries(links.map(a => [a.getAttribute('href').slice(1), a]));
+    let current = null;
+    function activate(id) {
+      if (id === current) return;
+      current = id;
+      links.forEach(a => {
+        const on = a.getAttribute('href') === '#' + id;
+        a.dataset.active.split(' ').forEach(c => a.classList.toggle(c, on));
+        a.classList.toggle('sub-card', !on);
+        a.classList.toggle('card-text-main', !on);
+        if (on) {
+          a.setAttribute('aria-current', 'location');
+          // Desplaza solo el menú en horizontal (móvil), nunca la página
+          const nav = a.parentElement;
+          if (nav.scrollWidth > nav.clientWidth) nav.scrollTo({ left: a.offsetLeft - nav.clientWidth / 2 + a.offsetWidth / 2, behavior: 'smooth' });
+        }
+        else a.removeAttribute('aria-current');
+      });
+    }
+    function update() {
+      const headerH = document.querySelector('header').offsetHeight;
+      const line = headerH + 80; // justo por debajo de la cabecera
+      let found = null;
+      Object.keys(byId).forEach(id => {
+        const sec = document.getElementById(id);
+        if (sec && sec.getBoundingClientRect().top <= line) found = id;
+      });
+      // Al llegar al final de la página se marca la última sección
+      const lastId = Object.keys(byId).at(-1);
+      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+      if (atBottom && document.getElementById(lastId).getBoundingClientRect().top < window.innerHeight * 0.6) found = lastId;
+      activate(found);
+    }
+    let ticking = false;
+    window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(() => { update(); ticking = false; }); } }, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+  }
+
   window.onload = function() {
+    setupActiveNav();
     syncThemeButton();
     updateUI();
     chartsReady = true;
