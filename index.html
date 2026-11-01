@@ -835,14 +835,14 @@
     return 'id,grupo,edad,basal,g60\n' + fullDataset.map(d=>`${d.id},${d.grupo},${d.edad},${d.basal},${d.g60}`).join('\n');
   }
 
-  function showCsvFeedback(msg, ok = true) {
+  function showCsvFeedback(msg, ok = true, ms = 5000) {
     const box = document.getElementById('csv-copy-feedback');
     document.getElementById('csv-feedback-text').textContent = msg;
     box.classList.toggle('bg-emerald-100', ok); box.classList.toggle('dark:bg-emerald-950', ok);
     box.classList.toggle('bg-rose-100', !ok); box.classList.toggle('dark:bg-rose-950', !ok);
     box.classList.remove('hidden');
     clearTimeout(showCsvFeedback.t);
-    showCsvFeedback.t = setTimeout(() => box.classList.add('hidden'), 5000);
+    showCsvFeedback.t = setTimeout(() => box.classList.add('hidden'), ms);
   }
 
   function exportModifiedCSV() {
@@ -865,27 +865,83 @@
     showCsvFeedback(`Descargado el CSV con ${fullDataset.length} pacientes.`);
   }
 
+  // Normaliza un nombre de columna: minúsculas, sin acentos ni símbolos
+  function normHeader(h) {
+    return h.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+  }
+
+  // Lee CSV separados por coma, punto y coma o tabulador. Reconoce las columnas
+  // por su nombre (id, grupo, edad, basal, g60 o los títulos de la Hoja1 del Excel)
+  // o, si no hay cabecera reconocible, por posición (5 columnas: id,grupo,edad,basal,g60;
+  // 3 columnas: grupo,basal,g60).
+  function parsePatientsCSV(text) {
+    const lines = text.replace(/^﻿/, '').split(/\r?\n/);
+    const first = lines.find(l => l.trim() !== '') || '';
+    const counts = { ';': first.split(';').length, '\t': first.split('\t').length, ',': first.split(',').length };
+    const sep = Object.keys(counts).reduce((x, y) => counts[y] > counts[x] ? y : x, ',');
+    const num = v => {
+      if (v === undefined) return NaN;
+      v = v.trim().replace(/^"|"$/g, '');
+      if (sep !== ',') v = v.replace(',', '.');
+      return v === '' ? NaN : Number(v);
+    };
+
+    const header = first.split(sep).map(normHeader);
+    const find = (...keys) => header.findIndex(h => keys.some(k => h === k || h.includes(k)));
+    let idx = { grupo: find('grupo'), basal: find('basal'), g60: find('g60', '60min', '60'), id: find('id'), edad: find('edad') };
+    const hasHeader = idx.grupo >= 0 && idx.basal >= 0 && idx.g60 >= 0;
+    if (!hasHeader) {
+      const n = first.split(sep).length;
+      if (n >= 5) idx = { id: 0, grupo: 1, edad: 2, basal: 3, g60: 4 };
+      else if (n >= 3) idx = { id: -1, grupo: 0, edad: -1, basal: 1, g60: 2 };
+      else return { rows: [], bad: [], error: 'No se reconocen las columnas. El CSV necesita al menos grupo, glucosa basal y glucosa a los 60 min.' };
+    }
+
+    const rows = [], bad = [];
+    const startLine = lines.indexOf(first) + (hasHeader || isNaN(num(first.split(sep)[idx.grupo])) ? 1 : 0);
+    for (let i = startLine; i < lines.length; i++) {
+      if (lines[i].trim() === '') continue;
+      const c = lines[i].split(sep);
+      const grupo = num(c[idx.grupo]), basal = num(c[idx.basal]), g60 = num(c[idx.g60]);
+      if (!(grupo === 1 || grupo === 2) || !(basal > 0) || !(g60 > 0)) { bad.push(i + 1); continue; }
+      const edad = idx.edad >= 0 ? num(c[idx.edad]) : NaN;
+      const id = idx.id >= 0 ? num(c[idx.id]) : NaN;
+      rows.push({ id, grupo, edad: edad > 0 ? edad : (grupo === 1 ? 25 : 45), basal, g60 });
+    }
+
+    // IDs: se respetan si son válidos y únicos; si no, se numeran de nuevo
+    const ids = rows.map(r => r.id);
+    if (ids.some(x => !Number.isInteger(x) || x <= 0) || new Set(ids).size !== ids.length) {
+      rows.forEach((r, i) => r.id = i + 1);
+    }
+    return { rows, bad, error: rows.length ? null : 'No hay ninguna fila válida en el archivo.' };
+  }
+
   function importCustomCSV(event) {
-    const file = event.target.files[0];
-    if(!file) return;
+    const input = event.target;
+    const file = input.files[0];
+    if (!file) return;
     const reader = new FileReader();
     reader.onload = function(e) {
-      const lines = e.target.result.split('\n');
-      const newRows = [];
-      for(let i=1; i<lines.length; i++) {
-        const cols = lines[i].split(',');
-        if(cols.length >= 5) {
-          newRows.push({ id: parseInt(cols[0])||i, grupo: parseInt(cols[1])||1, edad: parseInt(cols[2])||25, basal: parseFloat(cols[3])||85, g60: parseFloat(cols[4])||140 });
-        }
+      const { rows, bad, error } = parsePatientsCSV(e.target.result);
+      if (error) {
+        showCsvFeedback(`No se ha importado "${file.name}": ${error} Los datos actuales no han cambiado.`, false, 9000);
+        return;
       }
-      if(newRows.length > 0) {
-        fullDataset = newRows;
-        updateUI();
-        alert(`Se han importado exitosamente ${newRows.length} registros desde el CSV.`);
+      fullDataset = rows;
+      updateUI();
+      let msg = `Importados ${rows.length} pacientes desde "${file.name}".`;
+      if (bad.length) {
+        const list = bad.slice(0, 6).join(', ') + (bad.length > 6 ? '…' : '');
+        msg += ` Se han omitido ${bad.length} fila${bad.length > 1 ? 's' : ''} con datos no válidos (línea${bad.length > 1 ? 's' : ''} ${list}).`;
       }
+      showCsvFeedback(msg, true, bad.length ? 9000 : 5000);
     };
+    reader.onerror = () => showCsvFeedback(`No se ha podido leer "${file.name}".`, false);
     reader.readAsText(file);
+    input.value = ''; // permite volver a importar el mismo archivo
   }
+
 
   // ==========================================
   // SIMULADOR PREDICTOR (EJERCICIO 2)
