@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es" class="dark">
+<html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -108,7 +108,7 @@
       <!-- Global Controls -->
       <div class="flex items-center gap-3">
         <button onclick="toggleTheme()" class="btn-tactile px-4 py-2.5 text-xs font-mono font-bold rounded-xl sub-card card-text-main border-2 border-slate-300 dark:border-slate-700 flex items-center gap-2.5 shadow">
-          <span id="theme-icon" class="text-base">🌙</span> <span id="theme-text">Modo Oscuro</span>
+          <span id="theme-icon" class="text-base">☀️</span> <span id="theme-text">Modo Claro</span>
         </button>
         <button onclick="resetDatasetToOriginal()" class="btn-tactile px-4 py-2.5 text-xs font-mono font-bold rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white border-b-cyan-800 flex items-center gap-2.5 shadow">
           <span class="text-base">🔄</span> Restaurar Muestra
@@ -291,6 +291,20 @@
             <p class="text-sm card-text-muted">
               Ecuación de regresión ajustada en tiempo real: <code id="dyn-reg-equation" class="text-amber-600 dark:text-amber-300 font-mono font-bold sub-card px-3.5 py-2 rounded-xl inline-block mt-1">Ŷ = 91.3837 + 0.6969 · X</code>
             </p>
+
+            <!-- Control interactivo del nivel basal X -->
+            <div class="sub-card p-5 rounded-2xl border-2 border-amber-500/40 space-y-3 w-full">
+              <div class="flex items-center justify-between gap-4">
+                <label for="sim-slider" class="text-xs font-mono font-bold card-text-muted uppercase tracking-wider">Nivel basal X</label>
+                <span id="sim-val-display" class="text-sm font-mono font-black text-amber-600 dark:text-amber-300">83.0 mg/dL</span>
+              </div>
+              <input type="range" id="sim-slider" min="65" max="105" step="0.5" value="83"
+                     oninput="runPredictor(this.value)"
+                     class="w-full h-2 rounded-full cursor-pointer accent-amber-600 bg-amber-200 dark:bg-amber-900/60">
+              <div class="flex justify-between text-[11px] font-mono card-text-muted">
+                <span>65 mg/dL</span><span>Arrastra para ver la predicción en las Figuras 4 y 5</span><span>105 mg/dL</span>
+              </div>
+            </div>
           </div>
 
           <!-- Live Output Badge & Restore Button -->
@@ -496,8 +510,9 @@
           <div class="space-y-1.5">
             <div class="flex items-center gap-3">
               <h3 class="text-lg font-bold font-mono text-cyan-600 dark:text-cyan-300 uppercase tracking-wider flex items-center gap-3">
-                <span class="text-xl">📋</span> Registro Clínico Completo (N = <span id="table-total-count">65</span>)
+                <span class="text-xl">📋</span> <span>Registro Clínico Completo</span>
               </h3>
+              <span class="cartoon-badge text-xs px-3.5 py-1.5 rounded-lg bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 font-mono font-bold whitespace-nowrap">N = <span id="table-total-count">65</span> pacientes</span>
               <span id="edit-mode-tag" class="cartoon-badge text-xs px-3.5 py-1.5 rounded-lg sub-card card-text-muted font-mono font-bold">Modo Lectura</span>
             </div>
             <p class="text-xs sm:text-sm card-text-muted">Activa el interruptor para editar libremente las mediciones, clasificar según criterio ADA y exportar el CSV.</p>
@@ -677,6 +692,11 @@
     const elR = document.getElementById('dyn-pearson-r');
     if(elR) elR.textContent = `Pearson r = ${st.r.toFixed(4)}`;
 
+    // Mantiene la estimación Ŷ sincronizada si se editan los datos
+    if (document.getElementById('sim-result-y')) {
+      document.getElementById('sim-result-y').textContent = `${(st.intercept + st.slope * currentPredictorX).toFixed(2)} mg/dL`;
+    }
+
     const tbody = document.getElementById('descriptive-tbody');
     if(tbody) {
       tbody.innerHTML = `
@@ -817,6 +837,34 @@
     const yHat = st.intercept + st.slope * x;
     const resY = document.getElementById('sim-result-y');
     if (resY) resY.textContent = `${yHat.toFixed(2)} mg/dL`;
+
+    currentPredictorX = x;
+    updatePredictionMarkers();
+  }
+
+
+  // Marca la predicción actual en la Figura 4 (punto sobre la recta) y en la Figura 5 (línea en Ŷ)
+  function getPredictionMarkerData() {
+    const st = computeStats();
+    const yHat = st.intercept + st.slope * currentPredictorX;
+    const res = fullDataset.filter(d => d.grupo === 1).map(d => d.g60 - (st.intercept + st.slope * d.basal));
+    const lo = Math.floor(Math.min(...res)) - 1, hi = Math.ceil(Math.max(...res)) + 1;
+    return {
+      point: [{ x: currentPredictorX, y: yHat }],
+      guide: [{ x: yHat, y: lo }, { x: yHat, y: hi }]
+    };
+  }
+
+  function updatePredictionMarkers() {
+    const m = getPredictionMarkerData();
+    if (regressionChartInstance && regressionChartInstance.data.datasets[2]) {
+      regressionChartInstance.data.datasets[2].data = m.point;
+      regressionChartInstance.update('none');
+    }
+    if (residualsChartInstance && residualsChartInstance.data.datasets[1]) {
+      residualsChartInstance.data.datasets[1].data = m.guide;
+      residualsChartInstance.update('none');
+    }
   }
 
   function resetPredictorValue() {
@@ -830,6 +878,7 @@
   let boxplotChartInstance = null;
   let qqChartInstance = null;
   let regressionChartInstance = null;
+  let currentPredictorX = 83;
   let residualsChartInstance = null;
 
   function updateCharts(st) {
@@ -919,6 +968,15 @@
           borderColor: '#ef4444',
           borderWidth: 3,
           pointRadius: 0
+        }, {
+          label: 'Predicción X',
+          data: getPredictionMarkerData().point,
+          backgroundColor: '#7c3aed',
+          borderColor: '#ffffff',
+          borderWidth: 3,
+          pointRadius: 10,
+          pointHoverRadius: 12,
+          pointStyle: 'rectRot'
         }]
       },
       options: {
@@ -946,6 +1004,14 @@
           data: residualsData,
           backgroundColor: '#10b981',
           pointRadius: 5
+        }, {
+          label: 'Ŷ predicción X',
+          data: getPredictionMarkerData().guide,
+          type: 'line',
+          borderColor: '#7c3aed',
+          borderWidth: 2,
+          borderDash: [6, 4],
+          pointRadius: 0
         }]
       },
       options: {
